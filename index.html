@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+  </head>
+
+  <body>
+    <h1>Real-Time Chat</h1>
+    <input type="text" id="userID" placeholder="userID" />
+    <!-- <input type="text" id="blogID" placeholder="blogID" /> -->
+    <input type="text" id="message" placeholder="Message" />
+    <button onclick="sendMessage()">Send</button>
+    <div id="chat-log"></div>
+
+    <script>
+      var chatLog = document.getElementById("chat-log");
+
+      var ws = new WebSocket(
+        "ws://localhost:4000/api/v1/ws/66bb89684639e8b85d1557f5"
+      );
+      ws.onopen = function () {
+        console.log("WebSocket connection established.");
+      };
+      // ws.onmessage = function (event) {
+      //   try {
+      //     var msg = JSON.parse(event.data);
+      //     chatLog.innerHTML +=
+      //       "<div><strong>" +
+      //       msg.username +
+      //       ":</strong> " +
+      //       msg.content +
+      //       "</div>";
+      //   } catch (e) {
+      //     console.error("Error parsing WebSocket message:", e);
+      //   }
+      // };
+
+      ws.onerror = function (event) {
+        console.error("WebSocket error:", event);
+      };
+
+      ws.onclose = function (event) {
+        console.log("WebSocket connection closed.");
+      };
+      function sendMessage() {
+        var userID = document.getElementById("userID");
+        // var blogID = document.getElementById("blogID");
+        var message = document.getElementById("message");
+        var data = {
+          user_id: userID.value,
+          // blog_id: blogID.value,
+          content: message.value,
+        };
+        console.log(data);
+        ws.send(JSON.stringify(data));
+      }
+    </script>
+  </body>
+</html>
