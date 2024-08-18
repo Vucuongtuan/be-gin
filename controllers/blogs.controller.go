@@ -54,7 +54,13 @@ func GetAllBlogs(c *gin.Context) {
 		})
 		return
 	}
-
+	if total == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"status": http.StatusNotFound,
+			"msg":    "Blogs not found",
+		})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"status": http.StatusOK,
 		"msg":    "Get all blog successfully",
@@ -148,7 +154,6 @@ func CreateBlog(c *gin.Context) {
 		"msg":    msg,
 		"data":   createBlogDto,
 	})
-
 
 }
 

@@ -87,13 +87,15 @@ func (conn *Conn) GetAllBlogs(page int64, limit int64) ([]Blogs, int64, int64, e
 	option.SetLimit(limit)
 	get, err := conn.CollectionBlogs.Find(context.Background(), bson.M{}, option)
 	if err != nil {
+		
 		return nil, 0, 0, err
 	}
-
+ 
 	defer get.Close(context.Background())
 	for get.Next(context.Background()) {
 		var blog Blogs
 		if err = get.Decode(&blog); err != nil {
+			fmt.Println("Error decoding blog: %v", err)
 			return nil, 0, 0, err
 		}
 		blogs = append(blogs, blog)
