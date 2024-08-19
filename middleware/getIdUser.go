@@ -10,49 +10,46 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
+
 type Claims struct {
-    ID    string    `json:"_id bson:"_id"`
-    Name  string    `json:"name" bson:"_name"`
-    Email string    `json:"email" bson:"_email"`
-    Exp   string     `json:"exp" bson:"exp"`
+    ID    string `json:"_id" bson:"_id"`
+    Name  string `json:"name" bson:"name"`
+    Email string `json:"email" bson:"email"`
+    Exp   string `json:"exp" bson:"exp"`
     jwt.StandardClaims
 }
+func GetIdAuthorFromToken(c *gin.Context) (Claims, error) {
+    var emptyClaims Claims 
 
-func GetIdAuthorFromToken(c *gin.Context) (string,error){
-	accessToken := c.GetHeader("Authorization")
-	if accessToken == "" {
-		
-		return "",errors.New("err")
-	}
-	parts := strings.Split(accessToken, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-	
-		return "",errors.New("err")
-	}
+    accessToken := c.GetHeader("Authorization")
+    if accessToken == "" {
+        return emptyClaims, errors.New("authorization header missing")
+    }
 
-	secretKey := []byte(os.Getenv("JWT_SECRET_KEY"))
-	if len(secretKey) == 0 {
-	
-		return "",errors.New("Can't get secret key")
-	}
+    parts := strings.Split(accessToken, " ")
+    if len(parts) != 2 || parts[0] != "Bearer" {
+        return emptyClaims, errors.New("invalid token format")
+    }
 
-	token, err := jwt.ParseWithClaims(parts[1], &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-		}
-		return secretKey, nil
-	})
+    secretKey := []byte(os.Getenv("JWT_SECRET_KEY"))
+    if len(secretKey) == 0 {
+        return emptyClaims, errors.New("secret key not found")
+    }
 
-	if err != nil || !token.Valid {
-	
-		return "",err
-	}
+    token, err := jwt.ParseWithClaims(parts[1], &Claims{}, func(token *jwt.Token) (interface{}, error) {
+        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+            return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+        }
+        return secretKey, nil
+    })
 
-	claims, ok := token.Claims.(*Claims)
-	if !ok {
-	
-		return "",errors.New("Can't get secret key")
-	}
+    if err != nil || !token.Valid {
+        return emptyClaims, err
+    }
 
-  return claims.Id,nil
+    claims, ok := token.Claims.(*Claims)
+    if !ok {
+        return emptyClaims, errors.New("unable to parse claims or ID missing")
+    }
+    return *claims, nil
 }

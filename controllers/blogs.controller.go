@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"be/middleware"
 	"be/models"
 	"net/http"
 	"os"
@@ -161,7 +162,13 @@ func CreateBlog(c *gin.Context) {
 		})
 		return
 	}
-
+    valiToken,err := middleware.GetIdAuthorFromToken(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
 	conn := models.NewConn()
 	status, msg, err := conn.CreateBlog(createBlogDto, c)
 
@@ -178,6 +185,7 @@ func CreateBlog(c *gin.Context) {
 		"status": status,
 		"msg":    msg,
 		"data":   createBlogDto,
+		"id":valiToken,
 	})
 
 }

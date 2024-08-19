@@ -61,17 +61,11 @@ func UploadFile(c *gin.Context) {
 		})
 		return
 	}
-    valiToken,err := GetIdAuthorFromToken(c)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
+
 	fileURL := strings.ReplaceAll(folder, "/", "%2F")
 	fileLink :=  os.Getenv("URL_BUCKET_FIREBASE") + "/o/" + fileURL + fileName + "?alt=media"
+	
 	c.Set("file_link", fileLink)
-	c.Set("user_id", valiToken)
 	c.Next()
 }
 // folder, typeFile := utils.CheckFolder(file.Header.Get("Content-Type"))

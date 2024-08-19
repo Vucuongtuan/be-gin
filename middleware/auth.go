@@ -60,13 +60,13 @@ func LoginMiddleware(c *gin.Context) {
 		"email": 1,
 	})).Decode(&users)
 	if err != nil {
-		fmt.Println("Error: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status": http.StatusBadRequest,
 			"msg":    "Don't handle data user",
 			"err":    err.Error(),
 			// "data":uss,
 		})
+		c.Abort()
 		return
 	}
     _ ,err = CheckEmail(users.Email)
@@ -76,11 +76,14 @@ func LoginMiddleware(c *gin.Context) {
 			"msg":    "The user is logged in elsewhere",
 			"err":    err.Error(),
 		})
+		c.Abort()
         return
 	}
 
 	
-	c.Set("TUser", users)
+	c.Set("name",users.Name)
+	c.Set("email",users.Email)
+	c.Set("_id",users.ID)
 	c.Next()
 }
 

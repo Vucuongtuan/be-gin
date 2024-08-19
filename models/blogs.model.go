@@ -18,7 +18,7 @@ import (
 
 type Blogs struct {
 	ID          primitive.ObjectID `bson:"_id" json:"_id"`
-	Author      string             `bson:"author" json:"author"`
+	Author      primitive.ObjectID `bson:"author" json:"author"`
 	Title       string             `bson:"title" json:"title"`
 	Description string             `bson:"description" json:"description"`
 	Slug        *string            `bson:"slug" json:"slug"`
@@ -87,15 +87,14 @@ func (conn *Conn) GetAllBlogs(page int64, limit int64) ([]Blogs, int64, int64, e
 	option.SetLimit(limit)
 	get, err := conn.CollectionBlogs.Find(context.Background(), bson.M{}, option)
 	if err != nil {
-		
+
 		return nil, 0, 0, err
 	}
- 
+
 	defer get.Close(context.Background())
 	for get.Next(context.Background()) {
 		var blog Blogs
 		if err = get.Decode(&blog); err != nil {
-			fmt.Println("Error decoding blog: %v", err)
 			return nil, 0, 0, err
 		}
 		blogs = append(blogs, blog)
@@ -164,9 +163,9 @@ func (conn *Conn) GetBlogNewFeatured(page int64, limit int64) ([]Blogs, int64, i
 	return blogs, totalCount, limit, nil
 }
 
-
 func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto, c *gin.Context) (int, string, error) {
 	userID, ok := c.Get("user_id")
+	c.JSON(http.StatusOK,gin.H{"user_id": userID})
 	if !ok {
 		return http.StatusUnauthorized, "Can't get token from headers", nil
 	}
@@ -216,6 +215,7 @@ func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto, c *gin.Context) (int,
 		}
 	}
 	now := time.Now().UTC()
+	// authorObjectID ,_ := primitive.ObjectIDFromHex(userID)
 	blog := bson.M{
 		"author":      userID,
 		"title":       createBlogDto.Title,
@@ -299,7 +299,7 @@ func (conn *Conn) GetBlogDetailBySlug(slug string) (int, string, Blogs, error) {
 	err := conn.CollectionBlogs.FindOne(context.Background(), bson.M{"slug": slug}).Decode(&blogs)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return http.StatusNotFound, "Can't get blog details", Blogs{},err
+			return http.StatusNotFound, "Can't get blog details", Blogs{}, err
 		}
 		return http.StatusInternalServerError, "Can not find blog details", Blogs{}, err
 	}
