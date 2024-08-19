@@ -18,38 +18,41 @@ type Claims struct {
     Exp   string `json:"exp" bson:"exp"`
     jwt.StandardClaims
 }
-func GetIdAuthorFromToken(c *gin.Context) (Claims, error) {
-    var emptyClaims Claims 
-
+func GetIdAuthorFromToken(c *gin.Context) (string, error) {
     accessToken := c.GetHeader("Authorization")
-    if accessToken == "" {
-        return emptyClaims, errors.New("authorization header missing")
-    }
+	if accessToken == "" {
+		
+		return "",errors.New("err")
+	}
+	parts := strings.Split(accessToken, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+	
+		return "",errors.New("err")
+	}
 
-    parts := strings.Split(accessToken, " ")
-    if len(parts) != 2 || parts[0] != "Bearer" {
-        return emptyClaims, errors.New("invalid token format")
-    }
+	secretKey := []byte(os.Getenv("JWT_SECRET_KEY"))
+	if len(secretKey) == 0 {
+	
+		return "",errors.New("Can't get secret key")
+	}
 
-    secretKey := []byte(os.Getenv("JWT_SECRET_KEY"))
-    if len(secretKey) == 0 {
-        return emptyClaims, errors.New("secret key not found")
-    }
+	token, err := jwt.ParseWithClaims(parts[1], &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return secretKey, nil
+	})
 
-    token, err := jwt.ParseWithClaims(parts[1], &Claims{}, func(token *jwt.Token) (interface{}, error) {
-        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-            return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-        }
-        return secretKey, nil
-    })
+	if err != nil || !token.Valid {
+	
+		return "",err
+	}
 
-    if err != nil || !token.Valid {
-        return emptyClaims, err
-    }
+	claims, ok := token.Claims.(*Claims)
+	if !ok {
+	
+		return "",errors.New("Can't claims token")
+	}
 
-    claims, ok := token.Claims.(*Claims)
-    if !ok {
-        return emptyClaims, errors.New("unable to parse claims or ID missing")
-    }
-    return *claims, nil
+  return claims.Id,nil
 }

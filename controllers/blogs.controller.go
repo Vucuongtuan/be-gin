@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type createBlogsDto struct {
@@ -169,6 +170,7 @@ func CreateBlog(c *gin.Context) {
 		})
 		return
 	}
+	userIDOnject,_ := primitive.ObjectIDFromHex(valiToken)
 	conn := models.NewConn()
 	status, msg, err := conn.CreateBlog(createBlogDto, c)
 
