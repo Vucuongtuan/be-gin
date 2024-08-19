@@ -163,12 +163,8 @@ func (conn *Conn) GetBlogNewFeatured(page int64, limit int64) ([]Blogs, int64, i
 	return blogs, totalCount, limit, nil
 }
 
-func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto, c *gin.Context) (int, string, error) {
-	userID, ok := c.Get("user_id")
-	c.JSON(http.StatusOK,gin.H{"user_id": userID})
-	if !ok {
-		return http.StatusUnauthorized, "Can't get token from headers", nil
-	}
+func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto,userIDOnject primitive.ObjectID, c *gin.Context) (int, string, error) {
+
 	fileLinks, exists := c.Get("file_link")
 	if !exists {
 		return http.StatusInternalServerError, "File links not found", nil
@@ -217,7 +213,7 @@ func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto, c *gin.Context) (int,
 	now := time.Now().UTC()
 	// authorObjectID ,_ := primitive.ObjectIDFromHex(userID)
 	blog := bson.M{
-		"author":      userID,
+		"author":      userIDOnject,
 		"title":       createBlogDto.Title,
 		"description": createBlogDto.Description,
 		"slug":        &genarateSlug,

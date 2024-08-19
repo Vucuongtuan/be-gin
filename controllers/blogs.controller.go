@@ -172,7 +172,7 @@ func CreateBlog(c *gin.Context) {
 	}
 	userIDOnject,_ := primitive.ObjectIDFromHex(valiToken)
 	conn := models.NewConn()
-	status, msg, err := conn.CreateBlog(createBlogDto, c)
+	status, msg, err := conn.CreateBlog(createBlogDto,userIDOnject, c)
 
 	if err != nil {
 		c.JSON(status, gin.H{
