@@ -289,7 +289,7 @@ func (conn *Conn) DeleteBlog(id string) (int, string, error) {
 	return http.StatusOK, "Delete blog successfully", nil
 }
 
-func (conn *Conn) GetBlogDetailBySlug(slug string) (int, string, Blogs, error) {
+func (conn *Conn) GetBlogDetailBySlug(slug string) (int, string, any, error) {
 
 	var blogs Blogs
 	err := conn.CollectionBlogs.FindOne(context.Background(), bson.M{"slug": slug}).Decode(&blogs)
@@ -299,7 +299,20 @@ func (conn *Conn) GetBlogDetailBySlug(slug string) (int, string, Blogs, error) {
 		}
 		return http.StatusInternalServerError, "Can not find blog details", Blogs{}, err
 	}
-	return http.StatusOK, "Get blog details successfully", blogs, nil
+	var user User
+	err = conn.CollectionUser.FindOne(context.Background(), bson.M{"_id": blogs.Author}).Decode(&user)
+	if err != nil {
+		return http.StatusInternalServerError, "Can not find user details", Blogs{}, err
+	}
+	
+	data := struct {
+		Blog *Blogs `json:"blog"`
+		User *User  `json:"author"`
+	}{
+		Blog: &blogs,
+		User: &user,
+	}
+	return http.StatusOK, "Get blog details successfully", data, nil
 }
 func (conn *Conn) LikeBlog(userID primitive.ObjectID, blogID primitive.ObjectID) error {
 	var user User
