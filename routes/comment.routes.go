@@ -2,6 +2,7 @@ package routes
 
 import (
 	"be/controllers"
+	"be/middleware"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -17,8 +18,12 @@ func socketRoutes(r *gin.RouterGroup) {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Missing blog_id"})
 				return
 			}
-
-			controllers.SocketComment(c, blogID)
+			userID,err := middleware.GetIdAuthorFromToken(c)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(),"msg":"Can't comment by blog","status":http.StatusInternalServerError})
+return
+			}
+			controllers.SocketComment(c, blogID,userID)
 		})
 		ws.GET("/reply/:blogID", controllers.SocketReplyComment)
 		ws.GET("/rec-blog/:blogID", controllers.SocketLikeAndDisLikeBlog)

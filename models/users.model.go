@@ -192,3 +192,14 @@ func (conn *Conn) SaveBlogs(id string, idBlog string) error {
 	}
 	return nil
 }
+
+
+func (conn *Conn)GetUserByID(id primitive.ObjectID) (User,error){
+	var user User 
+
+	err := conn.CollectionUser.FindOne(context.Background(),bson.M{"_id":id}).Decode(&user)
+	if err != nil{
+		return User{},err
+	}
+	return user, nil
+}

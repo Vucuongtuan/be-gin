@@ -45,7 +45,7 @@ type ActionLikeOrDisLike struct {
 	Created_At *time.Time          `json:"created_at" bson:"created_at"`
 }
 
-func SocketComment(c *gin.Context, blogID string) {
+func SocketComment(c *gin.Context, blogID string, UserID string) {
 
 	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -71,7 +71,6 @@ func SocketComment(c *gin.Context, blogID string) {
 	for {
 
 		var commentData struct {
-			UserID  string `json:"user_id"`
 			Content string `json:"content"`
 		}
 		err := conn.ReadJSON(&commentData)
@@ -82,12 +81,13 @@ func SocketComment(c *gin.Context, blogID string) {
 			break
 		}
 		blogOBID, _ := primitive.ObjectIDFromHex(blogID)
-		userID, _ := primitive.ObjectIDFromHex(commentData.UserID)
+		userID, _ := primitive.ObjectIDFromHex(UserID)
 
 		model := models.NewConn()
 
 		_, _, _ = model.CommentByBlog(blogOBID, userID, commentData.Content)
 
+		user, err := model.GetUserByID(userID)
 		mutex.Lock()
 
 		for _, c := range clients[blogID] {
@@ -96,7 +96,9 @@ func SocketComment(c *gin.Context, blogID string) {
 					"status":  http.StatusOK,
 					"message": "New comment added",
 					"data": gin.H{
-						"user_id":  commentData.UserID,
+						"user_id":  userID,
+						"avatar":   user.Avatar,
+						"name":     user.Name,
 						"message":  commentData.Content,
 						"blog_id":  blogID,
 						"datetime": time.Now(),
