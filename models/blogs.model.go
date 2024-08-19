@@ -164,6 +164,7 @@ func (conn *Conn) GetBlogNewFeatured(page int64, limit int64) ([]Blogs, int64, i
 	return blogs, totalCount, limit, nil
 }
 
+
 func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto, c *gin.Context) (int, string, error) {
 	userID, ok := c.Get("user_id")
 	if !ok {
@@ -292,11 +293,14 @@ func (conn *Conn) DeleteBlog(id string) (int, string, error) {
 	return http.StatusOK, "Delete blog successfully", nil
 }
 
-func (conn *Conn) GetBlogDetailBySlug(slug string) (int64, string, Blogs, error) {
+func (conn *Conn) GetBlogDetailBySlug(slug string) (int, string, Blogs, error) {
 
 	var blogs Blogs
 	err := conn.CollectionBlogs.FindOne(context.Background(), bson.M{"slug": slug}).Decode(&blogs)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return http.StatusNotFound, "Can't get blog details", Blogs{},err
+		}
 		return http.StatusInternalServerError, "Can not find blog details", Blogs{}, err
 	}
 	return http.StatusOK, "Get blog details successfully", blogs, nil

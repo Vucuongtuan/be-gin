@@ -120,6 +120,31 @@ func GetBlogNewFeatured(c *gin.Context) {
 		"data": blogs,
 	})
 }
+func GetBlogDetailBySlug(c *gin.Context){
+	slug := c.Query("slug")
+	if slug == "" {
+		c.JSON(http.StatusNoContent,gin.H{
+			"status": http.StatusNoContent,
+			"msg": "Can't get slug from query parameter",
+		})
+		return
+	}
+	model := models.NewConn()
+	status,msg,blog,err := model.GetBlogDetailBySlug(slug)
+	if err != nil {
+		c.JSON(status,gin.H{
+			"status":status,
+			"msg": msg,
+			"err": err,
+		})
+		return
+	}
+	c.JSON(status,gin.H{
+		"status":status,
+		"msg":msg,
+		"data":blog,
+	})
+}
 
 func CreateBlog(c *gin.Context) {
 	var createBlogDto models.CreateBlogsDto

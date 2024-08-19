@@ -22,6 +22,7 @@ func routesBlogs(r *gin.RouterGroup) {
 		blogs.GET("/all",middleware.Authoriation())
 		blogs.GET("/new",controllers.GetBlogNewFeatured)
 		blogs.GET("/", middleware.Authoriation(), controllers.GetAllBlogs)
+		blogs.GET("/q",  controllers.GetBlogDetailBySlug)
 		blogs.POST("/", middleware.UploadFile, controllers.CreateBlog)
 		blogs.PATCH("/:id", middleware.UploadFile, controllers.UpdateBlog)
 		blogs.DELETE("/:id", controllers.DeleteBlog)
