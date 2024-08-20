@@ -300,38 +300,57 @@ func UnFollow(c *gin.Context) {
 		"msg":    "User unfollow successfully",
 	})
 }
-
-// func (ucl *UserController) GetAllUsers(c *gin.Context) {
-// 	user,err := ucl.UserService.GetAllUsers()
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{
-// 			"msg": err.Error(),
-// 		})
-// 		return
-// 	}
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"status": http.StatusOK,
-// 		"msg":"Get all users successfully",
-// 		"data":nil,
-// 	})
-// }
-// data := []dto.USER_DTO{
-// 	{
-// 		id:            primitive.NewObjectID(),
-// 		name:          "John",
-// 		Email:         "john@gmail.com",
-// 		Date_BirthDay: time.Now(),
-// 		Avatar:        nil,
-// 		Create_At:     time.Now(),
-// 		Update_At:     time.Now(),
-// 	},
-// 	{
-// 		ID:            primitive.NewObjectID(),
-// 		Name:          "Kevin",
-// 		Email:         "kevin@gmail.com",
-// 		Date_BirthDay:  time.Now(),
-// 		Avatar:        nil,
-// 		Create_At:     time.Now(),
-// 		Update_At:     time.Now(),
-// 	},
-// }
+func GetRecentNotificationsByUserID(c *gin.Context) {
+	id := c.Param("id")
+	conn := models.NewConn()
+	idObj, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Invalid user ID",
+			"err":    err.Error(),
+		})
+		return
+	}
+	nof, err := conn.GetRecentNotificationsByUserID(idObj)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Can not get recent notifications",
+			"err":    err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status": http.StatusOK,
+		"msg":    "Recent notifications successfully",
+		"data":   nof,
+	})
+}
+func GetAllNotificationsByUserID(c *gin.Context) {
+	id := c.Param("id")
+	conn := models.NewConn()
+	idObj, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Invalid user ID",
+			"err":    err,
+		})
+		return
+	}
+	nof, err := conn.GetAllNotificationsByUserID(idObj)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Invalid user ID",
+			"err":    err,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status": http.StatusOK,
+		"msg":    "Get OK",
+		"data":   nof,
+	})
+}

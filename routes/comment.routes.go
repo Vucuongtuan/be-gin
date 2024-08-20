@@ -29,7 +29,9 @@ func socketRoutes(r *gin.RouterGroup) {
 		ws.GET("/rec-blog/:blogID", controllers.SocketLikeAndDisLikeBlog)
 		ws.GET("/rec-comment/:commentID", controllers.SocketLikeAndDisLikeComment)
 		ws.GET("/rec-reply/:commentID", controllers.SocketLikeOrDislikeReply)
+		ws.GET("/notifications/all", controllers.GetAllNotificationsByUserID)
+		ws.GET("/notifications", controllers.GetAllNotificationsByUserID)
 		ws.GET("/follow", controllers.Follow)
-		// ws.GET("/like",controll)
+
 	}
 }

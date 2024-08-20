@@ -1,6 +1,7 @@
 package models
 
 import (
+	"be/socket"
 	"be/utils"
 	"context"
 	"time"
@@ -248,4 +249,44 @@ func (conn *Conn) NotifyModel(idUser primitive.ObjectID, idAuthor primitive.Obje
 		return err
 	}
 	return nil
+}
+
+func (conn *Conn) GetRecentNotificationsByUserID(userID primitive.ObjectID) ([]socket.Notification, error) {
+	collection := m.db.Collection("notifications")
+	filter := bson.M{"to_user_id": userID}
+	options := options.Find().SetSort(bson.D{{"create_at", -1}}).SetLimit(10) // Lấy 10 thông báo mới nhất
+
+	cursor, err := collection.Find(context.Background(), filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var notifications []socket.Notification
+	if err := cursor.All(context.Background(), &notifications); err != nil {
+		return nil, err
+	}
+
+	return notifications, nil
+}
+
+// GetAllNotificationsByUserID lấy tất cả thông báo cho user từ một vị trí bắt đầu
+func (conn *Conn) GetAllNotificationsByUserID(userID primitive.ObjectID) ([]socket.Notification, error) {
+	filter := bson.M{
+		"to_user_id": userID,
+	}
+	options := options.Find().SetSort(bson.D{{"create_at", -1}}) // Sắp xếp theo thời gian tạo
+
+	cursor, err := conn.CollectionNotify.Find(context.Background(), filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var notifications []socket.Notification
+	if err := cursor.All(context.Background(), &notifications); err != nil {
+		return nil, err
+	}
+
+	return notifications, nil
 }
