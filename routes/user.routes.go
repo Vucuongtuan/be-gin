@@ -13,7 +13,7 @@ func userRoutes(r *gin.RouterGroup) {
 		users.GET("/", controllers.GetAllUsers)
 		users.POST("/create", controllers.CreateUser)
 		users.POST("/un-follow", controllers.UnFollow)
-		users.GET("/ws/follow", controllers.Follow)
+
 		users.DELETE("/:id", controllers.DeleteAccountEndUser)
 		users.PUT("/:id", controllers.UpdateUser)
 

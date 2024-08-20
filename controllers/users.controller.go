@@ -3,6 +3,7 @@ package controllers
 import (
 	"be/helpers"
 	"be/models"
+	"be/socket"
 	"net/http"
 	"os"
 	"strconv"
@@ -44,6 +45,38 @@ func GetAllUsers(c *gin.Context) {
 		"totalPages": totalPages,
 		"page":       page,
 		"data":       users,
+	})
+}
+func GetUserByID(c *gin.Context) {
+	id := c.Param("id")
+	idObj, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Invalid user ID",
+			"err":    err.Error(),
+		})
+		return
+	}
+
+	conn := models.NewConn()
+
+	users, err := conn.GetUserByID(idObj)
+	///check err
+	if err != nil {
+		//return response error
+		c.JSON(http.StatusAlreadyReported, gin.H{
+			"status": http.StatusInternalServerError,
+			"msg":    "Can't get all users",
+			"err":    err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": http.StatusOK,
+		"msg":    "Get all users successfully",
+		"data":   users,
 	})
 }
 
@@ -217,15 +250,23 @@ func Follow(c *gin.Context) {
 		})
 		return
 	}
-	err = helpers.NotifyFollower(conn, userFollow.Name)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status": http.StatusInternalServerError,
-			"msg":    "Failed to send WebSocket message",
+	notification := socket.Notification{
+		FromUserID: userFollow.ID,
+		ToUserID:   userFollow.IDFollow,
+		Message:    userFollow.Name + " đã theo dõi bạn.",
+	}
+	if err := helpers.SendNotification(notification.ToUserID, notification.FromUserID, notification.Message); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Failed to send notification",
 			"err":    err.Error(),
 		})
 		return
 	}
+	go func() {
+		socket.Broadcast <- notification
+	}()
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": http.StatusOK,
 		"msg":    "User follow successfully",

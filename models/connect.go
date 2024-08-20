@@ -15,6 +15,7 @@ type Conn struct {
 	CollectionOtp           *mongo.Collection
 	CollectionComments      *mongo.Collection
 	CollectionReplyComments *mongo.Collection
+	CollectionNotify        *mongo.Collection
 }
 
 func NewConn() *Conn {
@@ -27,5 +28,6 @@ func NewConn() *Conn {
 		CollectionOtp:           config.GetCollection("otp"),
 		CollectionComments:      config.GetCollection("comments"),
 		CollectionReplyComments: config.GetCollection("reply_comments"),
+		CollectionNotify:        config.GetCollection("notify"),
 	}
 }

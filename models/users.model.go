@@ -233,3 +233,19 @@ func (conn *Conn) GetUserByID(id primitive.ObjectID) (User, error) {
 	}
 	return user, nil
 }
+
+func (conn *Conn) NotifyModel(idUser primitive.ObjectID, idAuthor primitive.ObjectID, name string, title *string, description *string) error {
+
+	filter := bson.M{
+		"name":        name,
+		"id_user":     idUser,
+		"title":       title,
+		"description": description,
+		"created_at":  time.Now(),
+	}
+	_, err := conn.CollectionNotify.InsertOne(context.Background(), filter)
+	if err != nil {
+		return err
+	}
+	return nil
+}

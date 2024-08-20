@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"be/models"
+	"be/socket"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -362,6 +363,33 @@ func SocketLikeAndDisLikeBlog(c *gin.Context) {
 			}
 		}
 		mutex.Unlock()
+	}
+}
+func NotifyWebSocket(c *gin.Context) {
+	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": http.StatusInternalServerError,
+			"msg":    "Failed to upgrade to WebSocket connection",
+			"err":    err.Error(),
+		})
+		return
+	}
+	defer conn.Close()
+
+	// Add the connection to the notification hub
+
+	// Listen for notifications and send them to the client
+	for notification := range socket.Broadcast {
+		err = conn.WriteJSON(notification)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": http.StatusInternalServerError,
+				"msg":    "Failed to send WebSocket message",
+				"err":    err.Error(),
+			})
+			return
+		}
 	}
 }
 
