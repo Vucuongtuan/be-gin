@@ -252,11 +252,10 @@ func (conn *Conn) NotifyModel(idUser primitive.ObjectID, idAuthor primitive.Obje
 }
 
 func (conn *Conn) GetRecentNotificationsByUserID(userID primitive.ObjectID) ([]socket.Notification, error) {
-	collection := m.db.Collection("notifications")
 	filter := bson.M{"to_user_id": userID}
 	options := options.Find().SetSort(bson.D{{"create_at", -1}}).SetLimit(10) // Lấy 10 thông báo mới nhất
 
-	cursor, err := collection.Find(context.Background(), filter, options)
+	cursor, err := conn.CollectionNotify.Find(context.Background(), filter, options)
 	if err != nil {
 		return nil, err
 	}
