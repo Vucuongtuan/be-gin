@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"be/helpers"
 	"be/models"
 	"net/http"
 	"os"
@@ -51,8 +52,8 @@ func CreateUser(c *gin.Context) {
 	var createUserDto models.CreateUser
 	if err := c.ShouldBindJSON(&createUserDto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"msg": err.Error(),
-			"data":createUserDto,
+			"msg":  err.Error(),
+			"data": createUserDto,
 		})
 		return
 	}
@@ -61,7 +62,7 @@ func CreateUser(c *gin.Context) {
 	account := models.Account{
 		Name_Account: createUserDto.NameAccount,
 		Password:     createUserDto.Password,
-		Created_At:    &time,
+		Created_At:   &time,
 	}
 	create_account, err := conn.CreateAccount(account)
 	if err != nil {
@@ -79,8 +80,8 @@ func CreateUser(c *gin.Context) {
 		Email:         createUserDto.Email,
 		Date_BirthDay: createUserDto.DateBirth,
 		Account:       create_account.Hex(),
-		
-		Created_At:     &time,
+
+		Created_At: &time,
 	}
 
 	// create_user,err :=
@@ -169,6 +170,94 @@ func UpdateUser(c *gin.Context) {
 	})
 	return
 
+}
+
+func Follow(c *gin.Context) {
+	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": http.StatusInternalServerError,
+			"msg":    "Failed to upgrade to WebSocket connection",
+			"err":    err.Error(),
+		})
+		return
+	}
+	defer conn.Close()
+
+	var userFollow struct {
+		ID       string `json:"_id" bson:"_id"`
+		IDFollow string `json:"id_follow" bson:"id_follow"`
+		Name     string `json:"name" bson:"name"`
+	}
+	if err := c.ShouldBindJSON(&userFollow); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Invalid request body",
+			"err":    err.Error(),
+		})
+		return
+	}
+
+	err = conn.ReadJSON(&userFollow)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Invalid request body",
+			"err":    err.Error(),
+		})
+		return
+	}
+	model := models.NewConn()
+	err = model.Follow(userFollow.ID, userFollow.IDFollow, userFollow.Name)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Can not follow user",
+			"err":    err.Error(),
+		})
+		return
+	}
+	err = helpers.NotifyFollower(conn, userFollow.Name)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": http.StatusInternalServerError,
+			"msg":    "Failed to send WebSocket message",
+			"err":    err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status": http.StatusOK,
+		"msg":    "User follow successfully",
+	})
+}
+func UnFollow(c *gin.Context) {
+	var userUnFollow struct {
+		ID       string `json:"_id" bson:"_id"`
+		IDFollow string `json:"id_follow" bson:"id_follow"`
+	}
+	if err := c.ShouldBindJSON(&userUnFollow); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Invalid request body",
+			"err":    err.Error(),
+		})
+		return
+	}
+	model := models.NewConn()
+	err := model.UnFollow(userUnFollow.ID, userUnFollow.IDFollow)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Can not unfollow user",
+			"err":    err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status": http.StatusOK,
+		"msg":    "User unfollow successfully",
+	})
 }
 
 // func (ucl *UserController) GetAllUsers(c *gin.Context) {

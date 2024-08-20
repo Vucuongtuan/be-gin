@@ -30,12 +30,12 @@ type Account struct {
 	Updated_At   *time.Time `json:"updated_at" bson:"updated_at,omitempty"`
 }
 type CreateUser struct {
-    Name         string     `json:"name" bson:"name"`
-    Email        string     `json:"email" bson:"email"`
-    DateBirth    *time.Time `json:"date_birth" bson:"date_birth"`
-    NameAccount  string     `json:"name_account" bson:"name_account"`
-    Password     string     `json:"password" bson:"password"`
-    CreatedAt    *time.Time `json:"created_at" bson:"created_at"`
+	Name        string     `json:"name" bson:"name"`
+	Email       string     `json:"email" bson:"email"`
+	DateBirth   *time.Time `json:"date_birth" bson:"date_birth"`
+	NameAccount string     `json:"name_account" bson:"name_account"`
+	Password    string     `json:"password" bson:"password"`
+	CreatedAt   *time.Time `json:"created_at" bson:"created_at"`
 }
 
 type UPdateUser struct {
@@ -152,27 +152,58 @@ func (c *Conn) UpdateUser(_id primitive.ObjectID, data UPdateUser) error {
 	return nil
 }
 
-func (conn *Conn) Followers(id string, idFollowers string) error {
+func (conn *Conn) UnFollow(id string, idFollowers string) error {
 	filter := bson.M{
-		"$set": bson.M{
-			"followers": idFollowers,
+		"$pull": bson.M{
+			"followers": bson.M{
+				"idFollower": idFollowers,
+			},
 		},
 	}
 	_, err := conn.CollectionUser.UpdateOne(context.Background(), bson.M{"_id": id}, filter)
+	if err != nil {
+		return err
+	}
 
+	filterFollower := bson.M{
+		"$pull": bson.M{
+			"follow": bson.M{
+				"idFollow": id,
+			},
+		},
+	}
+	_, err = conn.CollectionUser.UpdateOne(context.Background(), bson.M{"_id": idFollowers}, filterFollower)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (conn *Conn) Follow(id string, idFollow string) error {
+func (conn *Conn) Follow(id string, idFollow string, name string) error {
+	now := time.Now()
 	filter := bson.M{
-		"$set": bson.M{
-			"follow": idFollow,
+		"$push": bson.M{
+			"followers": bson.M{
+				"name":       name,
+				"idFollower": idFollow,
+				"created_at": &now,
+			},
 		},
 	}
 	_, err := conn.CollectionUser.UpdateOne(context.Background(), bson.M{"_id": id}, filter)
+	if err != nil {
+		return err
+	}
+	filterFollower := bson.M{
+		"$push": bson.M{
+			"follow": bson.M{
+				"name":       name,
+				"idFollow":   idFollow,
+				"created_at": &now,
+			},
+		},
+	}
+	_, err = conn.CollectionUser.UpdateOne(context.Background(), bson.M{"_id": idFollow}, filterFollower)
 	if err != nil {
 		return err
 	}
@@ -193,13 +224,12 @@ func (conn *Conn) SaveBlogs(id string, idBlog string) error {
 	return nil
 }
 
+func (conn *Conn) GetUserByID(id primitive.ObjectID) (User, error) {
+	var user User
 
-func (conn *Conn)GetUserByID(id primitive.ObjectID) (User,error){
-	var user User 
-
-	err := conn.CollectionUser.FindOne(context.Background(),bson.M{"_id":id}).Decode(&user)
-	if err != nil{
-		return User{},err
+	err := conn.CollectionUser.FindOne(context.Background(), bson.M{"_id": id}).Decode(&user)
+	if err != nil {
+		return User{}, err
 	}
 	return user, nil
 }
