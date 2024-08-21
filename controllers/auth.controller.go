@@ -25,14 +25,12 @@ func Login(c *gin.Context) {
 
 	conn := models.NewConn()
 
-
-
 	expToken := time.Now().Add(time.Hour * 24)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"exp":   expToken,
-		"name": name,
-        "email":email,
-        "_id":   _id,
+		"name":  name,
+		"email": email,
+		"_id":   _id,
 	})
 	var existingUser bson.M
 	err := conn.CollectionOnline.FindOne(context.Background(), bson.M{"token": token}).Decode(&existingUser)
@@ -76,7 +74,7 @@ func Login(c *gin.Context) {
 type ReqResetPassword struct {
 	Email           string     `json:"email" bson:"email"`
 	Password        string     `json:"password" bson:"password"`
-	ComfirmPassword string     `json:"comfirm_password" bson:"comfirm_password"`
+	ComfirmPassword string     `json:"confirm_password" bson:"confirm_password"`
 	Otp             int64      `json:"otp" bson:"otp"`
 	Created_At      *time.Time `json:"created_at" bson:"created_at"`
 }
@@ -94,7 +92,7 @@ func ResetPassword(c *gin.Context) {
 	if resetPasswordDto.Password != resetPasswordDto.ComfirmPassword {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"status": http.StatusUnprocessableEntity,
-			"msg":    "Can't bind data json request",
+			"msg":    "Password does not match comfirmPassword",
 		})
 		return
 	}
