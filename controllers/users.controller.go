@@ -206,6 +206,28 @@ func UpdateUser(c *gin.Context) {
 }
 
 func Follow(c *gin.Context) {
+	id, exists := c.Get("id")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Invalid user ID",
+			"err":    exists,
+		})
+		return
+	}
+	model := models.NewConn()
+	idObj, _ := primitive.ObjectIDFromHex(id.(string))
+
+	user, err := model.GetUserByID(idObj)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Can't get user from database",
+			"err":    err.Error(),
+		})
+		return
+	}
+
 	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -218,9 +240,7 @@ func Follow(c *gin.Context) {
 	defer conn.Close()
 
 	var userFollow struct {
-		ID       string `json:"_id" bson:"_id"`
-		IDFollow string `json:"id_follow" bson:"id_follow"`
-		Name     string `json:"name" bson:"name"`
+		ID string `json:"_id" bson:"_id"`
 	}
 	if err := c.ShouldBindJSON(&userFollow); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -240,8 +260,7 @@ func Follow(c *gin.Context) {
 		})
 		return
 	}
-	model := models.NewConn()
-	err = model.Follow(userFollow.ID, userFollow.IDFollow, userFollow.Name)
+	err = model.Follow(userFollow.ID, user.ID.Hex(), user.Name)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status": http.StatusBadRequest,
@@ -251,9 +270,9 @@ func Follow(c *gin.Context) {
 		return
 	}
 	notification := socket.Notification{
-		FromUserID: userFollow.ID,
-		ToUserID:   userFollow.IDFollow,
-		Message:    userFollow.Name + " đã theo dõi bạn.",
+		FromUserID: user.ID.Hex(),
+		ToUserID:   userFollow.ID,
+		Message:    user.Name + " đã theo dõi bạn.",
 	}
 	if err := helpers.SendNotification(notification.ToUserID, notification.FromUserID, notification.Message); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{

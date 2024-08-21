@@ -31,7 +31,7 @@ func socketRoutes(r *gin.RouterGroup) {
 		ws.GET("/rec-reply/:commentID", controllers.SocketLikeOrDislikeReply)
 		ws.GET("/notifications/all", controllers.GetAllNotificationsByUserID)
 		ws.GET("/notifications", controllers.GetAllNotificationsByUserID)
-		ws.GET("/follow", controllers.Follow)
+		ws.GET("/follow", middleware.GetIdAuthorFromTokenMidd, controllers.Follow)
 
 	}
 }
