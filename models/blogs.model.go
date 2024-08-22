@@ -163,14 +163,19 @@ func (conn *Conn) GetBlogNewFeatured(page int64, limit int64) ([]Blogs, int64, i
 	return blogs, totalCount, limit, nil
 }
 
-func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto,userIDOnject primitive.ObjectID, c *gin.Context) (int, string, error) {
-
+func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto, userIDOnject primitive.ObjectID, c *gin.Context) (int, string, error) {
+	timeNow := time.Now().UTC()
 	fileLinks, exists := c.Get("file_link")
 	if !exists {
 		return http.StatusInternalServerError, "File links not found", nil
 	}
-	genarateSlug := utils.GenerateSlug(createBlogDto.Title, 20)
-
+	var generateSlug string
+	if createBlogDto.Title == "" {
+		nameTitle := timeNow.Format("20060102150405") + userIDOnject.Hex()
+		generateSlug = utils.GenerateSlug(nameTitle, 20)
+	} else {
+		generateSlug = utils.GenerateSlug(createBlogDto.Title, 20)
+	}
 	var hashtags []Hashtags
 	for _, hashtag := range createBlogDto.Hashtags {
 		now := time.Now().UTC()
@@ -186,7 +191,6 @@ func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto,userIDOnject primitive
 		}
 		options := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
 
-		// Thực hiện FindOneAndUpdate để kiểm tra và cập nhật
 		var existingHashtag Hashtags
 		err := conn.CollectionHashtags.FindOneAndUpdate(context.Background(), filter, update, options).Decode(&existingHashtag)
 		if err != nil && err != mongo.ErrNoDocuments {
@@ -195,7 +199,7 @@ func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto,userIDOnject primitive
 		if err == mongo.ErrNoDocuments {
 			hashtagDoc := Hashtags{
 				Name:       hashtag,
-				Slug:       genarateSlug,
+				Slug:       generateSlug,
 				Created_At: &now,
 				Updated_At: &now,
 				Count:      1,
@@ -216,7 +220,7 @@ func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto,userIDOnject primitive
 		"author":      userIDOnject,
 		"title":       createBlogDto.Title,
 		"description": createBlogDto.Description,
-		"slug":        &genarateSlug,
+		"slug":        generateSlug + "-" + now.Format("20060102150405"),
 		"file":        fileLinks,
 		"hashtags":    hashtags,
 		"link":        createBlogDto.Link,
@@ -290,7 +294,6 @@ func (conn *Conn) DeleteBlog(id string) (int, string, error) {
 }
 
 func (conn *Conn) GetBlogDetailBySlug(slug string) (int, string, any, error) {
-
 	var blogs Blogs
 	err := conn.CollectionBlogs.FindOne(context.Background(), bson.M{"slug": slug}).Decode(&blogs)
 	if err != nil {
@@ -299,12 +302,13 @@ func (conn *Conn) GetBlogDetailBySlug(slug string) (int, string, any, error) {
 		}
 		return http.StatusInternalServerError, "Can not find blog details", Blogs{}, err
 	}
+	fmt.Println("author :", blogs.Author)
 	var user User
 	err = conn.CollectionUser.FindOne(context.Background(), bson.M{"_id": blogs.Author}).Decode(&user)
 	if err != nil {
 		return http.StatusInternalServerError, "Can not find user details", Blogs{}, err
 	}
-	
+
 	data := struct {
 		Blog *Blogs `json:"blog"`
 		User *User  `json:"author"`

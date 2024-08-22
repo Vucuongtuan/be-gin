@@ -4,6 +4,7 @@ import (
 	"be/socket"
 	"be/utils"
 	"context"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,12 +19,25 @@ type User struct {
 	Date_BirthDay *time.Time          `json:"date_birth" bson:"date_birth,omitempty"`
 	Avatar        *string             `json:"avatar" bson:"avatar,omitempty"`
 	Account       string              `json:"account" bson:"account"`
-	Followers     *[]string           `json:"followers" bson:"followers,omitempty"`
-	Follow        *[]string           `json:"follow" bson:"follow,omitempty"`
+	Followers     *[]Followers        `json:"followers" bson:"followers,omitempty"`
+	Follow        *[]Follow           `json:"follow" bson:"follow,omitempty"`
 	Created_At    *time.Time          `json:"created_at" bson:"created_at,omitempty"`
 	Updated_At    *time.Time          `json:"updated_at" bson:"updated_at,omitempty"`
 }
-
+type Follow struct {
+	ID         *primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
+	idFollow   *primitive.ObjectID `json:"idFollow" bson:"idFollow,omitempty"`
+	Name       string              `json:"name" bson:"name"`
+	Avatar     *string             `json:"avatar" bson:"avatar,omitempty"`
+	Created_At *time.Time          `json:"created_at" bson:"created_at,omitempty"`
+}
+type Followers struct {
+	ID          *primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
+	idFollowers *primitive.ObjectID `json:"idFollower" bson:"idFollower,omitempty"`
+	Name        string              `json:"name" bson:"name"`
+	Avatar      *string             `json:"avatar" bson:"avatar,omitempty"`
+	Created_At  *time.Time          `json:"created_at" bson:"created_at,omitempty"`
+}
 type Account struct {
 	Name_Account string     `json:"name_account" bson:"name_account"`
 	Password     string     `json:"password_account" bson:"password"`
@@ -181,30 +195,58 @@ func (conn *Conn) UnFollow(id string, idFollowers string) error {
 }
 
 func (conn *Conn) Follow(id string, idFollow string, name string) error {
+	idObj, _ := primitive.ObjectIDFromHex(id)
+
+	idFollowObj, _ := primitive.ObjectIDFromHex(idFollow)
+	filterCheck := bson.M{
+		"_id":             idObj,
+		"follow.idFollow": idFollowObj,
+	}
+	count, err := conn.CollectionUser.CountDocuments(context.Background(), filterCheck)
+	if err != nil {
+		return err
+	}
+	fmt.Println(count)
+	if count > 0 {
+		return fmt.Errorf("user has already followed")
+	}
 	now := time.Now()
 	filter := bson.M{
 		"$push": bson.M{
 			"followers": bson.M{
 				"name":       name,
-				"idFollower": idFollow,
+				"idFollower": idFollowObj,
 				"created_at": &now,
 			},
 		},
 	}
-	_, err := conn.CollectionUser.UpdateOne(context.Background(), bson.M{"_id": id}, filter)
+	_, err = conn.CollectionUser.UpdateOne(context.Background(), bson.M{"_id": idObj}, filter)
 	if err != nil {
 		return err
+	}
+
+	filterFCheck := bson.M{
+		"_id":              idFollowObj,
+		"followeridFollow": idObj,
+	}
+	countF, err := conn.CollectionUser.CountDocuments(context.Background(), filterFCheck)
+	if err != nil {
+		return err
+	}
+
+	if countF > 0 {
+		return fmt.Errorf("user has already followed")
 	}
 	filterFollower := bson.M{
 		"$push": bson.M{
 			"follow": bson.M{
 				"name":       name,
-				"idFollow":   idFollow,
+				"idFollow":   idFollowObj,
 				"created_at": &now,
 			},
 		},
 	}
-	_, err = conn.CollectionUser.UpdateOne(context.Background(), bson.M{"_id": idFollow}, filterFollower)
+	_, err = conn.CollectionUser.UpdateOne(context.Background(), bson.M{"_id": idFollowObj}, filterFollower)
 	if err != nil {
 		return err
 	}
@@ -227,8 +269,9 @@ func (conn *Conn) SaveBlogs(id string, idBlog string) error {
 
 func (conn *Conn) GetUserByID(id primitive.ObjectID) (User, error) {
 	var user User
-
+	fmt.Println(id)
 	err := conn.CollectionUser.FindOne(context.Background(), bson.M{"_id": id}).Decode(&user)
+	fmt.Println("err : ", err)
 	if err != nil {
 		return User{}, err
 	}

@@ -4,6 +4,7 @@ import (
 	"be/helpers"
 	"be/models"
 	"be/socket"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -220,24 +221,15 @@ func Follow(c *gin.Context) {
 
 	user, err := model.GetUserByID(idObj)
 	if err != nil {
+		fmt.Println(err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status": http.StatusBadRequest,
 			"msg":    "Can't get user from database",
 			"err":    err.Error(),
+			"data":   user,
 		})
 		return
 	}
-
-	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status": http.StatusInternalServerError,
-			"msg":    "Failed to upgrade to WebSocket connection",
-			"err":    err.Error(),
-		})
-		return
-	}
-	defer conn.Close()
 
 	var userFollow struct {
 		ID string `json:"_id" bson:"_id"`
@@ -251,15 +243,6 @@ func Follow(c *gin.Context) {
 		return
 	}
 
-	err = conn.ReadJSON(&userFollow)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status": http.StatusBadRequest,
-			"msg":    "Invalid request body",
-			"err":    err.Error(),
-		})
-		return
-	}
 	err = model.Follow(userFollow.ID, user.ID.Hex(), user.Name)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -282,9 +265,6 @@ func Follow(c *gin.Context) {
 		})
 		return
 	}
-	go func() {
-		socket.Broadcast <- notification
-	}()
 
 	c.JSON(http.StatusOK, gin.H{
 		"status": http.StatusOK,

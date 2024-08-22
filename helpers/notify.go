@@ -3,9 +3,11 @@ package helpers
 import (
 	"be/models"
 	"be/socket"
+	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"sync"
@@ -67,6 +69,7 @@ func SendNotification(userID, fromUserID, message string) error {
 	}
 
 	notifyMutex.Lock()
+	defer notifyMutex.Unlock()
 	if conn, exists := notifyClients[userID]; exists {
 		err := conn.WriteJSON(notificationDetail)
 		if err != nil {
@@ -75,6 +78,17 @@ func SendNotification(userID, fromUserID, message string) error {
 			delete(notifyClients, userID)
 		}
 	}
-	notifyMutex.Unlock()
+	conn := models.NewConn()
+	filter := bson.M{
+		"from_user_id": fromUserID,
+		"to_user_id":   userID,
+		"message":      message,
+		"avatar":       fromUser.Avatar,
+		"created_at":   time.Now(),
+	}
+	_, err = conn.CollectionNotify.InsertOne(context.Background(), filter)
+	if err != nil {
+		return err
+	}
 	return nil
 }
