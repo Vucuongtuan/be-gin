@@ -64,8 +64,13 @@ func Login(c *gin.Context) {
 	maxAge := int(expToken.Sub(time.Now()).Seconds())
 	c.SetCookie("access_token", tokenString, maxAge, "", "", false, true)
 	c.JSON(http.StatusOK, gin.H{
-		"status":       http.StatusOK,
-		"msg":          "Login successfully authenticated",
+		"status": http.StatusOK,
+		"msg":    "Login successfully authenticated",
+		"data": bson.M{
+			"name":  name,
+			"email": email,
+			"_id":   _id,
+		},
 		"access_token": tokenString,
 		"exp":          maxAge,
 	})
