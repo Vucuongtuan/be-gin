@@ -11,6 +11,7 @@ func userRoutes(r *gin.RouterGroup) {
 	users := r.Group("/users")
 	{
 		users.GET("/", controllers.GetAllUsers)
+		users.GET("/:id", controllers.GetUserByID)
 		users.POST("/create", controllers.CreateUser)
 		users.POST("/un-follow", controllers.UnFollow)
 
