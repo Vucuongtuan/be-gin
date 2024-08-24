@@ -5,15 +5,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
-	"reflect"
-	"time"
-
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"net/http"
+	"os"
+	"reflect"
+	"strconv"
+	"time"
 )
 
 type Blogs struct {
@@ -381,4 +382,48 @@ func (conn *Conn) View(blogID primitive.ObjectID) error {
 		return err
 	}
 	return nil
+}
+
+func (conn *Conn) GetBlogByAuthor(id primitive.ObjectID, page int) ([]Blogs, int, string, error) {
+	var blogs []Blogs
+	limitStr := os.Getenv("LIMIT")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 10
+	}
+	skip := (page - 1) * limit
+
+	filter := bson.M{
+		"author_id": id,
+	}
+
+	options := options.Find().SetSkip(int64(skip)).SetLimit(int64(limit))
+
+	blogsData, err := conn.CollectionBlogs.Find(context.Background(), filter, options)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, http.StatusNotFound, "blog not found", nil
+		}
+		return nil, http.StatusInternalServerError, "Cannot find blog details", err
+	}
+	defer blogsData.Close(context.Background())
+
+	for blogsData.Next(context.Background()) {
+		var blog Blogs
+		if err := blogsData.Decode(&blog); err != nil {
+			return nil, http.StatusInternalServerError, "Error decoding blog data", err
+		}
+		blogs = append(blogs, blog)
+	}
+
+	if err := blogsData.Err(); err != nil {
+		return nil, http.StatusInternalServerError, "Error iterating over blog cursor", err
+	}
+
+	totalBlogs, err := conn.CollectionBlogs.CountDocuments(context.Background(), filter)
+	if err != nil {
+		return nil, http.StatusInternalServerError, "Error getting total blog count", err
+	}
+
+	return blogs, http.StatusOK, fmt.Sprintf("Total blogs: %d", totalBlogs), nil
 }

@@ -160,7 +160,43 @@ func GetBlogDetailBySlug(c *gin.Context) {
 		"data":   blog,
 	})
 }
-
+func GetBlogByAuthor(c *gin.Context) {
+	idAuthor := c.Param("id")
+	pageStr := c.Query("page")
+	if idAuthor == "" {
+		c.JSON(http.StatusNoContent, gin.H{
+			"status": http.StatusNoContent,
+			"msg":    "Author not found",
+		})
+	}
+	if pageStr == "" {
+		pageStr = "1"
+	}
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Invalid page number",
+		})
+		return
+	}
+	idAuthorObj, _ := primitive.ObjectIDFromHex(idAuthor)
+	conn := models.NewConn()
+	blogs, status, msg, err := conn.GetBlogByAuthor(idAuthorObj, page)
+	if err != nil {
+		c.JSON(status, gin.H{
+			"status": status,
+			"msg":    msg,
+			"err":    err,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status": status,
+		"msg":    msg,
+		"data":   blogs,
+	})
+}
 func CreateBlog(c *gin.Context) {
 	var createBlogDto models.CreateBlogsDto
 	if err := c.ShouldBind(&createBlogDto); err != nil {
