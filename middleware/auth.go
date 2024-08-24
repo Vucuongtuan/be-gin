@@ -47,17 +47,19 @@ func LoginMiddleware(c *gin.Context) {
 		return
 	}
 	var users struct {
-		ID    primitive.ObjectID `bson:"_id" json:"_id"`
-		Name  string             `bson:"name" json:"name"`
-		Email string             `bson:"email" json:"email"`
+		ID     primitive.ObjectID `bson:"_id" json:"_id"`
+		Name   string             `bson:"name" json:"name"`
+		Email  string             `bson:"email" json:"email"`
+		Avatar string             `bson:"avatar" json:"avatar"`
 	}
 	filter := bson.M{
 		"account": dbAccount.ID.Hex(),
 	}
 	err = conn.CollectionUser.FindOne(context.Background(), filter, options.FindOne().SetProjection(bson.M{
-		"_id":   1,
-		"name":  1,
-		"email": 1,
+		"_id":    1,
+		"name":   1,
+		"email":  1,
+		"avatar": 1,
 	})).Decode(&users)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -83,6 +85,8 @@ func LoginMiddleware(c *gin.Context) {
 	c.Set("name", users.Name)
 	c.Set("email", users.Email)
 	c.Set("_id", users.ID)
+	c.Set("avatar", users.Avatar)
+
 	c.Next()
 }
 
