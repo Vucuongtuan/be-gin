@@ -122,29 +122,42 @@ func GetBlogNewFeatured(c *gin.Context) {
 		"data": blogs,
 	})
 }
-func GetBlogDetailBySlug(c *gin.Context){
+func GetBlogDetailBySlug(c *gin.Context) {
+	var user struct {
+		idUser string `bson:"id_user" json:"id_user"`
+	}
+
+	if err := c.ShouldBindQuery(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Invalid query parameters",
+			"error":  err.Error(),
+		})
+		return
+	}
+
 	slug := c.Query("slug")
 	if slug == "" {
-		c.JSON(http.StatusNoContent,gin.H{
+		c.JSON(http.StatusNoContent, gin.H{
 			"status": http.StatusNoContent,
-			"msg": "Can't get slug from query parameter",
+			"msg":    "Can't get slug from query parameter",
 		})
 		return
 	}
 	model := models.NewConn()
-	status,msg,blog,err := model.GetBlogDetailBySlug(slug)
+	status, msg, blog, err := model.GetBlogDetailBySlug(slug)
 	if err != nil {
-		c.JSON(status,gin.H{
-			"status":status,
-			"msg": msg,
-			"err": err,
+		c.JSON(status, gin.H{
+			"status": status,
+			"msg":    msg,
+			"err":    err,
 		})
 		return
 	}
-	c.JSON(status,gin.H{
-		"status":status,
-		"msg":msg,
-		"data":blog,
+	c.JSON(status, gin.H{
+		"status": status,
+		"msg":    msg,
+		"data":   blog,
 	})
 }
 
@@ -163,16 +176,16 @@ func CreateBlog(c *gin.Context) {
 		})
 		return
 	}
-    valiToken,err := middleware.GetIdAuthorFromToken(c)
+	valiToken, err := middleware.GetIdAuthorFromToken(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-	userIDOnject,_ := primitive.ObjectIDFromHex(valiToken)
+	userIDOnject, _ := primitive.ObjectIDFromHex(valiToken)
 	conn := models.NewConn()
-	status, msg, err := conn.CreateBlog(createBlogDto,userIDOnject, c)
+	status, msg, err := conn.CreateBlog(createBlogDto, userIDOnject, c)
 
 	if err != nil {
 		c.JSON(status, gin.H{
@@ -187,7 +200,7 @@ func CreateBlog(c *gin.Context) {
 		"status": status,
 		"msg":    msg,
 		"data":   createBlogDto,
-		"id":valiToken,
+		"id":     valiToken,
 	})
 
 }

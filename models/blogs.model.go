@@ -179,7 +179,7 @@ func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto, userIDOnject primitiv
 	var hashtags []Hashtags
 	for _, hashtag := range createBlogDto.Hashtags {
 		now := time.Now().UTC()
-		genarateSlug := utils.GenerateSlug(hashtag, 20)
+		genarateSlugg := utils.GenerateSlug(hashtag, 20)
 
 		// Tìm hashtag trong cơ sở dữ liệu
 		filter := bson.M{"name": hashtag}
@@ -199,7 +199,7 @@ func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto, userIDOnject primitiv
 		if err == mongo.ErrNoDocuments {
 			hashtagDoc := Hashtags{
 				Name:       hashtag,
-				Slug:       generateSlug,
+				Slug:       genarateSlugg,
 				Created_At: &now,
 				Updated_At: &now,
 				Count:      1,
@@ -223,6 +223,9 @@ func (conn *Conn) CreateBlog(createBlogDto CreateBlogsDto, userIDOnject primitiv
 		"slug":        generateSlug + "-" + now.Format("20060102150405"),
 		"file":        fileLinks,
 		"hashtags":    hashtags,
+		"like":        bson.A{},
+		"dislike":     bson.A{},
+		"share":       bson.A{},
 		"link":        createBlogDto.Link,
 		"type":        createBlogDto.Type,
 		"view":        new(int64),
@@ -326,11 +329,14 @@ func (conn *Conn) LikeBlog(userID primitive.ObjectID, blogID primitive.ObjectID)
 		return err
 	}
 	username := user.Name
+	now := time.Now()
 	filter := bson.M{
 		"$push": bson.M{
-			"like":       userID,
-			"name":       username,
-			"created_at": time.Now(),
+			"like": bson.M{
+				"user_id":    userID,
+				"name":       username,
+				"created_at": now,
+			},
 		},
 	}
 	_, err = conn.CollectionBlogs.UpdateByID(context.Background(), blogID, filter)

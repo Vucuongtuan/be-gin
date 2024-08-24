@@ -38,6 +38,6 @@ func authRoutes(r *gin.RouterGroup) {
 		auth.POST("/register", controllers.CreateUser)
 		auth.POST("/login", middleware.LoginMiddleware, controllers.Login)
 		auth.PATCH("/reset-password", controllers.ResetPassword)
-		auth.DELETE("/logout",)
+		auth.DELETE("/logout", controllers.LogoutController)
 	}
 }

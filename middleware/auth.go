@@ -69,7 +69,7 @@ func LoginMiddleware(c *gin.Context) {
 		c.Abort()
 		return
 	}
-    _ ,err = CheckEmail(users.Email)
+	_, err = CheckEmail(users.Email)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status": http.StatusBadRequest,
@@ -77,13 +77,12 @@ func LoginMiddleware(c *gin.Context) {
 			"err":    err.Error(),
 		})
 		c.Abort()
-        return
+		return
 	}
 
-	
-	c.Set("name",users.Name)
-	c.Set("email",users.Email)
-	c.Set("_id",users.ID)
+	c.Set("name", users.Name)
+	c.Set("email", users.Email)
+	c.Set("_id", users.ID)
 	c.Next()
 }
 
@@ -111,13 +110,12 @@ func Authoriation() gin.HandlerFunc {
 		fmt.Println(accessToken)
 		if accessToken == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				            "status": http.StatusUnauthorized,
-				            "msg":    "Can't get access token from request headers",
-						
-				        })
-				        c.Abort()
-            return
-        }
+				"status": http.StatusUnauthorized,
+				"msg":    "Can't get access token from request headers",
+			})
+			c.Abort()
+			return
+		}
 		// if err != nil {
 		// 	if err == http.ErrNoCookie {
 		// 		c.Header("WWW-Authenticate", "Bearer")
@@ -157,7 +155,7 @@ func Authoriation() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-	
+
 		// if time.Now().Unix() > claims.exp {
 		// 	c.JSON(http.StatusFound, gin.H{
 		// 		"status": http.StatusFound,
@@ -193,19 +191,19 @@ func ValidateToken(access_token string) (bool, error) {
 	filter := bson.M{"token": access_token}
 	_, err := conn.CollectionOnline.CountDocuments(context.Background(), filter)
 	if err != nil {
-        return false, err
-    }
+		return false, err
+	}
 	return true, nil
 }
 
-func CheckEmail (email string) (bool ,error) {
+func CheckEmail(email string) (bool, error) {
 	conn := models.NewConn()
 	filter := bson.M{
-		"email":email,
+		"email": email,
 	}
-	count ,err := conn.CollectionOnline.CountDocuments(context.Background(), filter)
+	count, err := conn.CollectionOnline.CountDocuments(context.Background(), filter)
 	if err != nil {
-		return false ,err
+		return false, err
 	}
-	return count > 0 ,nil
+	return count > 0, nil
 }

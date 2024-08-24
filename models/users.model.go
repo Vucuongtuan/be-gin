@@ -199,16 +199,16 @@ func (conn *Conn) Follow(id string, idFollow string, name string) error {
 
 	idFollowObj, _ := primitive.ObjectIDFromHex(idFollow)
 	filterCheck := bson.M{
-		"_id":             idObj,
-		"follow.idFollow": idFollowObj,
+		"_id":                  idObj,
+		"followers.idFollower": idFollowObj,
 	}
 	count, err := conn.CollectionUser.CountDocuments(context.Background(), filterCheck)
+	fmt.Println("Count :", count)
 	if err != nil {
 		return err
 	}
-	fmt.Println(count)
 	if count > 0 {
-		return fmt.Errorf("user has already followed")
+		return fmt.Errorf("user has already been followed")
 	}
 	now := time.Now()
 	filter := bson.M{
@@ -226,16 +226,15 @@ func (conn *Conn) Follow(id string, idFollow string, name string) error {
 	}
 
 	filterFCheck := bson.M{
-		"_id":              idFollowObj,
-		"followeridFollow": idObj,
+		"_id":                idObj,
+		"followers.idFollow": idFollowObj,
 	}
 	countF, err := conn.CollectionUser.CountDocuments(context.Background(), filterFCheck)
 	if err != nil {
 		return err
 	}
-
 	if countF > 0 {
-		return fmt.Errorf("user has already followed")
+		return fmt.Errorf("user has already been followed")
 	}
 	filterFollower := bson.M{
 		"$push": bson.M{

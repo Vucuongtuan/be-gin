@@ -84,6 +84,7 @@ func SendNotification(userID, fromUserID, message string) error {
 		"to_user_id":   userID,
 		"message":      message,
 		"avatar":       fromUser.Avatar,
+		"read":         false,
 		"created_at":   time.Now(),
 	}
 	_, err = conn.CollectionNotify.InsertOne(context.Background(), filter)
