@@ -84,6 +84,7 @@ func (conn *Conn) GetAllBlogs(page int64, limit int64) ([]Blogs, int64, int64, e
 	var blogs []Blogs
 	skip := (page - 1) * limit
 	option := options.Find()
+	option.SetSort(bson.M{"created_at": -1})
 	option.SetSkip(skip)
 	option.SetLimit(limit)
 	get, err := conn.CollectionBlogs.Find(context.Background(), bson.M{}, option)
