@@ -194,7 +194,7 @@ func (conn *Conn) UnFollow(id string, idFollowers string) error {
 	return nil
 }
 
-func (conn *Conn) Follow(id string, idFollow string, name string) error {
+func (conn *Conn) Follow(id string, idFollow string, name string, author string) error {
 	idObj, _ := primitive.ObjectIDFromHex(id)
 
 	idFollowObj, _ := primitive.ObjectIDFromHex(idFollow)
@@ -239,8 +239,8 @@ func (conn *Conn) Follow(id string, idFollow string, name string) error {
 	filterFollower := bson.M{
 		"$push": bson.M{
 			"follow": bson.M{
-				"name":       name,
-				"idFollow":   idFollowObj,
+				"name":       author,
+				"idFollow":   idObj,
 				"created_at": &now,
 			},
 		},

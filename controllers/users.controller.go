@@ -242,8 +242,19 @@ func Follow(c *gin.Context) {
 		})
 		return
 	}
-
-	err = model.Follow(userFollow.ID, user.ID.Hex(), user.Name)
+	userFollowObj, err := primitive.ObjectIDFromHex(userFollow.ID)
+	author, err := model.GetUserByID(userFollowObj)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Can't get author from database",
+			"err":    err.Error(),
+			"data":   user,
+		})
+		return
+	}
+	err = model.Follow(userFollow.ID, user.ID.Hex(), user.Name, author.Name)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status": http.StatusBadRequest,
