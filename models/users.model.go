@@ -25,15 +25,13 @@ type User struct {
 	Updated_At    *time.Time          `json:"updated_at" bson:"updated_at,omitempty"`
 }
 type Follow struct {
-	ID         *primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
-	idFollow   *primitive.ObjectID `json:"idFollow" bson:"idFollow,omitempty"`
+	IDFollow   *primitive.ObjectID `json:"idFollow" bson:"idFollow,omitempty"`
 	Name       string              `json:"name" bson:"name"`
 	Avatar     *string             `json:"avatar" bson:"avatar,omitempty"`
 	Created_At *time.Time          `json:"created_at" bson:"created_at,omitempty"`
 }
 type Followers struct {
-	ID          *primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
-	idFollowers *primitive.ObjectID `json:"idFollower" bson:"idFollower,omitempty"`
+	IDFollowers *primitive.ObjectID `json:"idFollower" bson:"idFollower,omitempty"`
 	Name        string              `json:"name" bson:"name"`
 	Avatar      *string             `json:"avatar" bson:"avatar,omitempty"`
 	Created_At  *time.Time          `json:"created_at" bson:"created_at,omitempty"`
