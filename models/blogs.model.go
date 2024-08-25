@@ -394,7 +394,7 @@ func (conn *Conn) GetBlogByAuthor(id primitive.ObjectID, page int) ([]Blogs, int
 	skip := (page - 1) * limit
 
 	filter := bson.M{
-		"author_id": id,
+		"author": id,
 	}
 
 	options := options.Find().SetSkip(int64(skip)).SetLimit(int64(limit))
