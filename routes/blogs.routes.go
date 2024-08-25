@@ -26,7 +26,7 @@ func routesBlogs(r *gin.RouterGroup) {
 		blogs.GET("/author/:id", controllers.GetBlogByAuthor)
 		blogs.GET("/q", controllers.GetBlogDetailBySlug)
 
-		blogs.POST("/", middleware.UploadFile, controllers.CreateBlog)
+		blogs.POST("/author/:id", middleware.UploadFile, controllers.CreateBlog)
 		blogs.POST("/rec-blog", graphQL.ActionLikeOrDislike)
 		blogs.PATCH("/:id", middleware.UploadFile, controllers.UpdateBlog)
 		blogs.DELETE("/:id", controllers.DeleteBlog)

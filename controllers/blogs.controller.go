@@ -198,6 +198,16 @@ func GetBlogByAuthor(c *gin.Context) {
 	})
 }
 func CreateBlog(c *gin.Context) {
+	idAuthor := c.Param("id")
+	if idAuthor == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"msg":    "Can't get id author",
+			"status": http.StatusBadRequest,
+		})
+		return
+
+	}
+	idAuthorObj, _ := primitive.ObjectIDFromHex(idAuthor)
 	var createBlogDto models.CreateBlogsDto
 	if err := c.ShouldBind(&createBlogDto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -215,13 +225,13 @@ func CreateBlog(c *gin.Context) {
 	valiToken, err := middleware.GetIdAuthorFromToken(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
+			"err": err.Error(),
 		})
 		return
 	}
-	userIDOnject, _ := primitive.ObjectIDFromHex(valiToken)
+
 	conn := models.NewConn()
-	status, msg, err := conn.CreateBlog(createBlogDto, userIDOnject, c)
+	status, msg, err := conn.CreateBlog(createBlogDto, idAuthorObj, c)
 
 	if err != nil {
 		c.JSON(status, gin.H{
