@@ -1,6 +1,8 @@
 package socket
 
-import "time"
+import (
+	"time"
+)
 
 var Broadcast = make(chan Notification)
 

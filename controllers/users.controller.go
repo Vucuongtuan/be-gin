@@ -14,7 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// func get all users
 func GetAllUsers(c *gin.Context) {
 	// get query parameters from url api
 	pageQuery := c.DefaultQuery("page", "1")
@@ -81,7 +80,6 @@ func GetUserByID(c *gin.Context) {
 	})
 }
 
-// func register create user end account
 func CreateUser(c *gin.Context) {
 	var createUserDto models.CreateUser
 	if err := c.ShouldBindJSON(&createUserDto); err != nil {
@@ -91,14 +89,14 @@ func CreateUser(c *gin.Context) {
 		})
 		return
 	}
-	time := time.Now()
+	now := time.Now()
 	conn := models.NewConn()
 	account := models.Account{
 		Name_Account: createUserDto.NameAccount,
 		Password:     createUserDto.Password,
-		Created_At:   &time,
+		Created_At:   &now,
 	}
-	create_account, err := conn.CreateAccount(account)
+	createAccount, err := conn.CreateAccount(account)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 
@@ -113,20 +111,20 @@ func CreateUser(c *gin.Context) {
 		Name:          createUserDto.Name,
 		Email:         createUserDto.Email,
 		Date_BirthDay: createUserDto.DateBirth,
-		Account:       create_account.Hex(),
+		Account:       createAccount.Hex(),
 
-		Created_At: &time,
+		Created_At: &now,
 	}
 
 	// create_user,err :=
 	err = conn.CreateUser(user)
 	if err != nil {
-		err = conn.DeleteUser(create_account)
+		err = conn.DeleteUser(createAccount)
 		c.JSON(http.StatusBadRequest, gin.H{
 
 			"status": http.StatusBadRequest,
 			"msg":    "Failed to create account,please try again",
-			"err":    err.Error(),
+			"err":    err,
 		})
 		return
 	}

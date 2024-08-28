@@ -308,62 +308,40 @@ func SocketLikeAndDisLikeBlog(c *gin.Context) {
 		return
 	}
 
-	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to connect websocket"})
+	var data ActionLikeOrDisLike
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"err": err.Error(),
+			"msg":    "Can't reaction blog",
+			"status": http.StatusBadRequest,
+		})
 		return
 	}
-	defer conn.Close()
 
-	mutex.Lock()
-	if _, exists := clients[blogID]; !exists {
-		clients[blogID] = []*websocket.Conn{}
-	}
-	clients[blogID] = append(clients[blogID], conn)
-	mutex.Unlock()
-
-	defer func() {
-		mutex.Lock()
-		conns := clients[blogID]
-		for i, c := range conns {
-			if c == conn {
-				clients[blogID] = append(conns[:i], conns[i+1:]...)
-				break
-			}
-		}
-		mutex.Unlock()
-	}()
-
-	for {
-		_, action, err := conn.ReadMessage()
+	model := models.NewConn()
+	if data.Type == "like" {
+		err := model.LikeBlog(data.UserID, data.BlogID)
 		if err != nil {
-			mutex.Lock()
-			delete(clients, blogID)
-			mutex.Unlock()
+			c.JSON(http.StatusInternalServerError, gin.H{"err": err.Error(), "msg": "Can't like blog", "status": http.StatusInternalServerError})
 			return
 		}
-
-		var data ActionLikeOrDisLike
-		if err := json.Unmarshal(action, &data); err != nil {
-			continue
+		c.JSON(http.StatusOK, gin.H{
+			"status": http.StatusOK,
+			"msg":    "ok",
+		})
+		return
+	} else {
+		err := model.DisLikeBlog(data.UserID, data.BlogID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"err": err.Error(), "msg": "Can't like blog", "status": http.StatusInternalServerError})
+			return
 		}
-
-		model := models.NewConn()
-		if data.Type == "like" {
-			_ = model.LikeBlog(data.UserID, data.BlogID)
-		} else {
-			_ = model.DisLikeBlog(data.UserID, data.BlogID)
-		}
-
-		mutex.Lock()
-		for _, client := range clients[blogID] {
-			if err := client.WriteJSON(data); err != nil {
-				client.Close()
-				delete(clients, blogID)
-			}
-		}
-		mutex.Unlock()
+		c.JSON(http.StatusOK, gin.H{
+			"status": http.StatusOK,
+			"msg":    "ok",
+		})
+		return
 	}
+
 }
 func NotifyWebSocket(c *gin.Context) {
 	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)

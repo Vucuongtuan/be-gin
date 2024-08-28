@@ -369,13 +369,13 @@ func (conn *Conn) DisLikeBlog(userID primitive.ObjectID, blogID primitive.Object
 	return nil
 }
 
-func (conn *Conn) View(blogID primitive.ObjectID) error {
+func (conn *Conn) View(slug string) error {
 	filter := bson.M{
 		"$inc": bson.M{
 			"view": 1,
 		},
 	}
-	_, err := conn.CollectionBlogs.UpdateByID(context.Background(), blogID, filter)
+	_, err := conn.CollectionBlogs.UpdateOne(context.Background(), bson.M{"slug": slug}, filter)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return errors.New("update failed: no documents found with the specified blog ID")
@@ -427,4 +427,45 @@ func (conn *Conn) GetBlogByAuthor(id primitive.ObjectID, page int) ([]Blogs, int
 	}
 
 	return blogs, http.StatusOK, fmt.Sprintf("Total blogs: %d", totalBlogs), nil
+}
+func (conn *Conn) SearchBlogsByHashtag(hashtag string) ([]Blogs, error) {
+	var blogs []Blogs
+
+	filter := bson.M{"hashtags.name": hashtag} // Tìm kiếm theo tên hashtag
+	cursor, err := conn.CollectionBlogs.Find(context.Background(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	for cursor.Next(context.Background()) {
+		var blog Blogs
+		if err := cursor.Decode(&blog); err != nil {
+			return nil, err
+		}
+		blogs = append(blogs, blog)
+	}
+
+	return blogs, nil
+}
+
+func (conn *Conn) GetRelatedHashtags(keyword string) ([]Hashtags, error) {
+	var relatedHashtags []Hashtags
+
+	filter := bson.M{"name": bson.M{"$regex": primitive.Regex{Pattern: keyword, Options: "i"}}}
+	cursor, err := conn.CollectionHashtags.Find(context.Background(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	for cursor.Next(context.Background()) {
+		var relatedHashtag Hashtags
+		if err := cursor.Decode(&relatedHashtag); err != nil {
+			return nil, err
+		}
+		relatedHashtags = append(relatedHashtags, relatedHashtag)
+	}
+
+	return relatedHashtags, nil
 }

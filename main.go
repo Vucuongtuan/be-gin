@@ -5,23 +5,23 @@ import (
 	"be/routes"
 	"context"
 	"fmt"
-
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
+	"net/http"
+	"sync"
 )
 
 func main() {
 	client, err := config.ConnectionDB()
-    if err != nil {
-        fmt.Println(err)	
-    }
+	if err != nil {
+		fmt.Println(err)
+	}
 	defer func() {
 		if err := client.Disconnect(context.Background()); err != nil {
 			fmt.Println("Failed to disconnect from MongoDB: %v", err)
 		}
 	}()
-
-
 
 	// config res api
 	r := gin.Default()
@@ -33,12 +33,9 @@ func main() {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
-	
+
 	// r.Use(cors.Default())
 	//socket.io
-
-
-	
 
 	// server := socketio.NewServer(nil)
 
@@ -91,8 +88,8 @@ func main() {
 		}
 	}
 
-	//socket 
-	
+	//socket
+
 	uploads := r.Group("/uploads")
 	{
 		uploads.Static("/image", "./uploads/image")
@@ -100,14 +97,55 @@ func main() {
 		uploads.Static("/video", "./uploads/video")
 		uploads.Static("/othor", "./uploads")
 	}
-	//socket 
+	//socket
 
-
+	// Endpoint để thông báo khi người dùng theo dõi
+	r.GET("/chat", handleWebSocket)
 
 	//config post
 	r.Run(":4000")
 }
 
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
+var clients = make(map[*websocket.Conn]bool)
+var clientsMutex sync.Mutex
+
+func handleWebSocket(c *gin.Context) {
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not open websocket connection"})
+		return
+	}
+	defer conn.Close()
+
+	clientsMutex.Lock()
+	clients[conn] = true
+	clientsMutex.Unlock()
+
+	for {
+		messageType, msg, err := conn.ReadMessage()
+		if err != nil {
+			clientsMutex.Lock()
+			delete(clients, conn)
+			clientsMutex.Unlock()
+			break
+		}
+
+		clientsMutex.Lock()
+		for client := range clients {
+			if err := client.WriteMessage(messageType, msg); err != nil {
+				client.Close()
+				delete(clients, client)
+			}
+		}
+		clientsMutex.Unlock()
+	}
+}
 
 // func getUser(c *gin.Context) {
 // 	id := c.Query("id")
@@ -119,7 +157,7 @@ func main() {
 
 // func postUser(c *gin.Context) {
 // 	var user TData
-        
+
 // 	if err := c.ShouldBindJSON(&user); err != nil {
 // 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 // 		return

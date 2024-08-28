@@ -2,6 +2,7 @@ package routes
 
 import (
 	"be/controllers"
+	"be/helpers"
 	"be/middleware"
 	"net/http"
 
@@ -26,11 +27,11 @@ func socketRoutes(r *gin.RouterGroup) {
 			controllers.SocketComment(c, blogID, userID)
 		})
 		ws.GET("/reply/:blogID", controllers.SocketReplyComment)
-		ws.GET("/rec-blog/:blogID", controllers.SocketLikeAndDisLikeBlog)
+		ws.POST("/rec-blog/:blogID", controllers.SocketLikeAndDisLikeBlog)
 		ws.GET("/rec-comment/:commentID", controllers.SocketLikeAndDisLikeComment)
 		ws.GET("/rec-reply/:commentID", controllers.SocketLikeOrDislikeReply)
 		ws.GET("/notifications/all", controllers.GetAllNotificationsByUserID)
-		ws.GET("/notifications", controllers.GetAllNotificationsByUserID)
+		ws.GET("/notifications/:id", helpers.WebSocketHandler)
 		ws.POST("/follow", middleware.GetIdAuthorFromTokenMidd, controllers.Follow)
 
 	}

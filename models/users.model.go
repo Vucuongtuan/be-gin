@@ -5,6 +5,8 @@ import (
 	"be/utils"
 	"context"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"net/http"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -328,4 +330,46 @@ func (conn *Conn) GetAllNotificationsByUserID(userID primitive.ObjectID) ([]sock
 	}
 
 	return notifications, nil
+}
+func (conn *Conn) MarkNotificationAsRead(c *gin.Context) {
+	var req struct {
+		NotificationID string `json:"notification_id"`
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Invalid request data",
+			"err":    err.Error(),
+		})
+		return
+	}
+
+	notificationID, err := primitive.ObjectIDFromHex(req.NotificationID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Invalid notification ID",
+			"err":    err.Error(),
+		})
+		return
+	}
+
+	filter := bson.M{"_id": notificationID}
+	update := bson.M{"$set": bson.M{"read": true}}
+
+	_, err = conn.CollectionNotify.UpdateOne(c.Request.Context(), filter, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": http.StatusInternalServerError,
+			"msg":    "Failed to update notification",
+			"err":    err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": http.StatusOK,
+		"msg":    "Notification marked as read",
+	})
 }
