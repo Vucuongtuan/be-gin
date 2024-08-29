@@ -431,7 +431,7 @@ func (conn *Conn) GetBlogByAuthor(id primitive.ObjectID, page int) ([]Blogs, int
 func (conn *Conn) SearchBlogsByHashtag(hashtag string) ([]Blogs, error) {
 	var blogs []Blogs
 
-	filter := bson.M{"hashtags.name": hashtag} // Tìm kiếm theo tên hashtag
+	filter := bson.M{"hashtags": bson.M{"$elemMatch": bson.M{"name": hashtag}}}
 	cursor, err := conn.CollectionBlogs.Find(context.Background(), filter)
 	if err != nil {
 		return nil, err
@@ -446,6 +446,12 @@ func (conn *Conn) SearchBlogsByHashtag(hashtag string) ([]Blogs, error) {
 		blogs = append(blogs, blog)
 	}
 
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+	if blogs == nil {
+		return nil, errors.New("blogs not found")
+	}
 	return blogs, nil
 }
 

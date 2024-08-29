@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -11,10 +12,10 @@ import (
 
 type Comment struct {
 	ID         *primitive.ObjectID `bson:"_id" json:"_id,omitempty"`
-	UserName   *string             `bson:"username" json:"username"`
-	BlogID     *primitive.ObjectID `bson:"blog_id" json:"blog_id"`
+	UserName   string              `bson:"username" json:"username"`
+	BlogID     primitive.ObjectID  `bson:"blog_id" json:"blog_id"`
 	Content    string              `bson:"content" json:"content"`
-	UserID     *primitive.ObjectID `bson:"user_id" json:"user_id"`
+	UserID     primitive.ObjectID  `bson:"user_id" json:"user_id"`
 	Like       []Like              `bson:"like" json:"like"`
 	DisLike    []Dislike           `bson:"dislike" json:"dislike"`
 	Created_At *time.Time          `bson:"created_at" json:"created_at"`
@@ -32,28 +33,29 @@ type Reply struct {
 	Updated_At *time.Time          `bson:"updated_at" json:"updated_at"`
 }
 
-func (conn *Conn) CommentByBlog(blogID primitive.ObjectID, userID primitive.ObjectID, message string) (int, string, error) {
+func (conn *Conn) CommentByBlog(blogID primitive.ObjectID, userID primitive.ObjectID, message string) (*Comment, error) {
 	var user User
 
 	err := conn.CollectionUser.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
 	if err != nil {
-		return http.StatusBadRequest, "Can't find user", err
+		return nil, err
 	}
 	username := user.Name
 	now := time.Now()
-	filter := bson.M{
-		"blog_id":    blogID,
-		"username":   username,
-		"content":    message,
-		"user_id":    userID,
-		"created_at": now,
-		"updated_at": now,
+
+	comment := &Comment{
+		BlogID:     blogID,
+		UserName:   username,
+		Content:    message,
+		UserID:     userID,
+		Created_At: &now,
+		Updated_At: &now,
 	}
-	_, err = conn.CollectionComments.InsertOne(context.Background(), filter)
+	_, err = conn.CollectionComments.InsertOne(context.Background(), comment)
 	if err != nil {
-		return http.StatusInternalServerError, "Can't insert comment , please try again later", err
+		return nil, err
 	}
-	return http.StatusOK, "Comment inserted successfully", nil
+	return comment, nil
 }
 
 func (conn *Conn) ReplyComment(blogID primitive.ObjectID, userID primitive.ObjectID, commentID primitive.ObjectID, message string) (int64, string, error) {
@@ -166,4 +168,31 @@ func (conn *Conn) ReplyCommentDisLike(userID primitive.ObjectID, CommentID primi
 		return err
 	}
 	return nil
+}
+func (conn *Conn) GetAllCommentByBlog(idBlog primitive.ObjectID) ([]Comment, error) {
+	filter := bson.M{
+		"blog_id": idBlog,
+	}
+	var comments []Comment
+	cursor, err := conn.CollectionComments.Find(context.Background(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	for cursor.Next(context.Background()) {
+		var comment Comment
+		if err := cursor.Decode(&comment); err != nil {
+			return nil, err
+		}
+		comments = append(comments, comment)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+	if comments == nil {
+		return nil, errors.New("comment not found")
+	}
+	return comments, nil
 }

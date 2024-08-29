@@ -86,7 +86,7 @@ func SocketComment(c *gin.Context, blogID string, UserID string) {
 
 		model := models.NewConn()
 
-		_, _, _ = model.CommentByBlog(blogOBID, userID, commentData.Content)
+		_, _ = model.CommentByBlog(blogOBID, userID, commentData.Content)
 
 		user, err := model.GetUserByID(userID)
 		mutex.Lock()
@@ -223,7 +223,7 @@ func SocketReplyComment(c *gin.Context) {
 		}
 
 		model := models.NewConn()
-		_, _, _ = model.CommentByBlog(msg.BlogID, msg.UserID, msg.Content)
+		_, _ = model.CommentByBlog(msg.BlogID, msg.UserID, msg.Content)
 
 		mutex.Lock()
 		for _, client := range clients[blogID] {

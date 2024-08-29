@@ -4,8 +4,6 @@ import (
 	"be/controllers"
 	"be/helpers"
 	"be/middleware"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,19 +11,7 @@ func socketRoutes(r *gin.RouterGroup) {
 
 	ws := r.Group("/ws")
 	{
-		ws.GET("/:blogID", func(c *gin.Context) {
-			blogID := c.Param("blogID")
-			if blogID == "" {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Missing blog_id"})
-				return
-			}
-			userID, err := middleware.GetIdAuthorFromToken(c)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "msg": "Can't comment by blog", "status": http.StatusInternalServerError})
-				return
-			}
-			controllers.SocketComment(c, blogID, userID)
-		})
+		ws.GET("/:blogID", helpers.SOcketCOmmentBlog)
 		ws.GET("/reply/:blogID", controllers.SocketReplyComment)
 		ws.POST("/rec-blog/:blogID", controllers.SocketLikeAndDisLikeBlog)
 		ws.GET("/rec-comment/:commentID", controllers.SocketLikeAndDisLikeComment)
