@@ -4,7 +4,6 @@ import (
 	"be/helpers"
 	"be/models"
 	"be/socket"
-	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -219,7 +218,6 @@ func Follow(c *gin.Context) {
 
 	user, err := model.GetUserByID(idObj)
 	if err != nil {
-		fmt.Println(err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status": http.StatusBadRequest,
 			"msg":    "Can't get user from database",
@@ -243,7 +241,6 @@ func Follow(c *gin.Context) {
 	userFollowObj, err := primitive.ObjectIDFromHex(userFollow.ID)
 	author, err := model.GetUserByID(userFollowObj)
 	if err != nil {
-		fmt.Println(err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status": http.StatusBadRequest,
 			"msg":    "Can't get author from database",

@@ -12,6 +12,7 @@ import (
 
 type Comment struct {
 	ID         *primitive.ObjectID `bson:"_id" json:"_id,omitempty"`
+	Avatar     string              `bson:"avatar" json:"avatar,omitempty"`
 	UserName   string              `bson:"username" json:"username"`
 	BlogID     primitive.ObjectID  `bson:"blog_id" json:"blog_id"`
 	Content    string              `bson:"content" json:"content"`
@@ -33,10 +34,37 @@ type Reply struct {
 	Updated_At *time.Time          `bson:"updated_at" json:"updated_at"`
 }
 
-func (conn *Conn) CommentByBlog(blogID primitive.ObjectID, userID primitive.ObjectID, message string) (*Comment, error) {
-	var user User
+func (conn *Conn) GetCommentByBlog(blogID primitive.ObjectID) ([]Comment, error) {
+	var comments []Comment
+	cur, err := conn.CollectionComments.Find(context.Background(), bson.M{"blog_id": blogID})
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(context.Background())
 
-	err := conn.CollectionUser.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+	for cur.Next(context.Background()) {
+		var comment Comment
+		if err := cur.Decode(&comment); err != nil {
+			return nil, err
+		}
+		comments = append(comments, comment)
+	}
+
+	if err := cur.Err(); err != nil {
+		return nil, err
+	}
+
+	return comments, nil
+}
+
+func (conn *Conn) CommentByBlog(blogID primitive.ObjectID, userID primitive.ObjectID, message string) (*Comment, error) {
+	var dataUser User
+	err := conn.CollectionUser.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&dataUser)
+	if err != nil {
+		return nil, err
+	}
+	var user User
+	err = conn.CollectionUser.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}
@@ -46,12 +74,22 @@ func (conn *Conn) CommentByBlog(blogID primitive.ObjectID, userID primitive.Obje
 	comment := &Comment{
 		BlogID:     blogID,
 		UserName:   username,
+		Avatar:     dataUser.Avatar,
 		Content:    message,
 		UserID:     userID,
 		Created_At: &now,
 		Updated_At: &now,
 	}
-	_, err = conn.CollectionComments.InsertOne(context.Background(), comment)
+	filter := bson.M{
+		"blog_id":    blogID,
+		"user_id":    userID,
+		"username":   username,
+		"avatar":     dataUser.Avatar,
+		"content":    message,
+		"created_at": &now,
+		"updated_at": &now,
+	}
+	_, err = conn.CollectionComments.InsertOne(context.Background(), filter)
 	if err != nil {
 		return nil, err
 	}

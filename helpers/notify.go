@@ -171,90 +171,74 @@ type ReqDataComment struct {
 	Name    string `json:"name" bson:"name"`
 }
 
-func SOcketCOmmentBlog(c *gin.Context) {
-	var data ReqDataComment
-	if err := c.ShouldBindJSON(&data); err != nil {
+func GetCommmentByBlog(c *gin.Context) {
+	var dataReq ReqDataComment
+	if err := c.BindJSON(&dataReq); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"err":    err.Error(),
 			"status": http.StatusBadRequest,
-			"msg":    "Failed to bind request body",
+			"msg":    "Err,reqComment",
+			"err":    err,
 		})
 	}
 	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"msg":    "Failed to connect websocket",
+			"msg":    "Failed to upgrade connection",
 			"status": http.StatusInternalServerError,
 			"err":    err.Error(),
 		})
 		return
 	}
+
 	defer conn.Close()
-
-	blogID := data.IDBlog
-	blogCommentClientsMutex.Lock()
-	if _, ok := blogCommentClients[blogID]; !ok {
-		blogCommentClients[blogID] = &BlogCommentClients{
-			Clients: make(map[string]*websocket.Conn),
-			Mutex:   sync.Mutex{},
-		}
-	}
-	blogCommentClientsMutex.Unlock()
-
-	blogCommentClients[blogID].Mutex.Lock()
-	blogCommentClients[blogID].Clients[c.Request.RemoteAddr] = conn
-	blogCommentClients[blogID].Mutex.Unlock()
-	dbConn := models.NewConn()
+	notifyMutex.Lock()
+	notifyClients[dataReq.IDBlog] = conn
+	notifyMutex.Unlock()
 
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			blogCommentClients[blogID].Mutex.Lock()
-			delete(blogCommentClients[blogID].Clients, c.Request.RemoteAddr)
-			blogCommentClients[blogID].Mutex.Unlock()
+			log.Println("Read error:", err)
+			notifyMutex.Lock()
+			delete(notifyClients, dataReq.IDBlog)
+			notifyMutex.Unlock()
 			break
 		}
-		if string(message) == "get_comment" {
-			idObj, err := primitive.ObjectIDFromHex(data.IDBlog)
-			if err != nil {
-				conn.WriteMessage(websocket.TextMessage, []byte(`{"error": "Invalid user ID"}`))
-				continue
-			}
-
-			listCOmment, err := dbConn.GetAllCommentByBlog(idObj)
-			if err != nil {
-				conn.WriteMessage(websocket.TextMessage, []byte(`{"error": "Failed to fetch notifications"}`))
-				continue
-			}
-
-			notificationsJSON, _ := json.Marshal(listCOmment)
-			conn.WriteMessage(websocket.TextMessage, notificationsJSON)
+		fmt.Println("Message:", string(message))
+		data := &ReqDataComment{
+			IDBlog:  dataReq.IDBlog,
+			UserID:  dataReq.UserID,
+			Name:    dataReq.Name,
+			Message: dataReq.Message,
+			Avatar:  dataReq.Avatar,
 		}
-		if string(message) == "new_comment" {
-			idUserObj, _ := primitive.ObjectIDFromHex(data.UserID)
-
-			idObj, err := primitive.ObjectIDFromHex(data.IDBlog)
-			if err != nil {
-				conn.WriteMessage(websocket.TextMessage, []byte(`{"error": "Invalid user ID"}`))
-				continue
-			}
-			newComment, err := dbConn.CommentByBlog(idObj, idUserObj, data.Message)
-			if err != nil {
-				conn.WriteMessage(websocket.TextMessage, []byte(`{"error": "Failed to fetch comment"}`))
-				continue
-			}
-			newCommentJSON, err := json.Marshal(newComment)
-			if err != nil {
-				conn.WriteMessage(websocket.TextMessage, []byte(`{"error": "Failed to marshal comment"}`))
-				continue
-			}
-
-			blogCommentClientsMutex.Lock()
-			blogCommentClients[blogID].Mutex.Lock()
-			for _, clientConn := range blogCommentClients[blogID].Clients {
-				clientConn.WriteMessage(websocket.TextMessage, newCommentJSON)
-			}
-			blogCommentClients[blogID].Mutex.Unlock()
-		}
+		notificationsJSON, _ := json.Marshal(data)
+		conn.WriteMessage(websocket.TextMessage, notificationsJSON)
 	}
+
+}
+func SendCommentAllUser(idBlog string, userID string, name, avatar, message string) error {
+	comment := gin.H{
+		"blog_id":    idBlog,
+		"user_id":    userID,
+		"username":   name,
+		"content":    message,
+		"avater":     avatar,
+		"created_at": time.Now(),
+	}
+
+	notifyMutex.Lock()
+	defer notifyMutex.Unlock()
+
+	if conn, exists := notifyClients[idBlog]; exists {
+		err := conn.WriteJSON(comment)
+		if err != nil {
+			fmt.Println("Error sending notification:", err)
+			conn.Close()
+			delete(notifyClients, idBlog)
+		}
+	} else {
+		fmt.Println("No WebSocket connection found for blog:", idBlog)
+	}
+	return nil
 }

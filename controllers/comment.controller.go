@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"be/helpers"
 	"be/models"
 	"be/socket"
 	"encoding/json"
@@ -20,7 +21,7 @@ type CommentByBlogDTO struct {
 	UserID  string `bson:"user_id" json:"user_id"`
 }
 
-var wsupgrader = websocket.Upgrader{
+var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
@@ -29,6 +30,18 @@ var wsupgrader = websocket.Upgrader{
 }
 var clients = make(map[string][]*websocket.Conn)
 var mutex = sync.Mutex{}
+
+type BlogCommentClients struct {
+	Clients map[string]*websocket.Conn
+	Mutex   sync.Mutex
+}
+
+// var blogCommentClients = make(map[string]*BlogCommentClients)
+var blogCommentClientsMutex = sync.Mutex{}
+var blogCommentClients = &BlogCommentClients{
+	Clients: make(map[string]*websocket.Conn),
+	Mutex:   sync.Mutex{},
+}
 
 type Message struct {
 	Username   string              `json:"username"`
@@ -46,9 +59,33 @@ type ActionLikeOrDisLike struct {
 	Created_At *time.Time          `json:"created_at" bson:"created_at"`
 }
 
+func CommentByBlog(c *gin.Context) {
+	id := c.Param("blogID")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Can't get id blog by params",
+		})
+	}
+	model := models.NewConn()
+	idObj, _ := primitive.ObjectIDFromHex(id)
+	blog, err := model.GetCommentByBlog(idObj)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status": http.StatusOK,
+		"data":   blog,
+		"msg":    "Get blog OK",
+	})
+}
 func SocketComment(c *gin.Context, blogID string, UserID string) {
 
-	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Println(err)
 		return
@@ -110,6 +147,44 @@ func SocketComment(c *gin.Context, blogID string, UserID string) {
 		mutex.Unlock()
 	}
 }
+
+func CommmentByBlog(c *gin.Context) {
+	var dataReq helpers.ReqDataComment
+	if err := c.BindJSON(&dataReq); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Err,reqComment",
+			"err":    err,
+		})
+		return
+	}
+	model := models.NewConn()
+	idBlogObj, _ := primitive.ObjectIDFromHex(dataReq.IDBlog)
+	idUserObj, _ := primitive.ObjectIDFromHex(dataReq.UserID)
+
+	_, err := model.CommentByBlog(idBlogObj, idUserObj, dataReq.Message)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Err",
+			"err":    err.Error(),
+		})
+		return
+	}
+	if err := helpers.SendCommentAllUser(dataReq.IDBlog, dataReq.UserID, dataReq.Name, dataReq.Avatar, dataReq.Message); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": http.StatusBadRequest,
+			"msg":    "Failed to send notification",
+			"err":    err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status": http.StatusOK,
+		"msg":    "OK",
+		"data":   dataReq,
+	})
+}
 func SocketLikeAndDisLikeComment(c *gin.Context) {
 	commentID := c.Param("commentID")
 	if commentID == "" {
@@ -117,7 +192,7 @@ func SocketLikeAndDisLikeComment(c *gin.Context) {
 		return
 	}
 
-	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to connect websocket"})
 		return
@@ -182,7 +257,7 @@ func SocketReplyComment(c *gin.Context) {
 		return
 	}
 
-	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to connect websocket"})
 		return
@@ -243,7 +318,7 @@ func SocketLikeOrDislikeReply(c *gin.Context) {
 		return
 	}
 
-	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to connect websocket"})
 		return
@@ -344,7 +419,7 @@ func SocketLikeAndDisLikeBlog(c *gin.Context) {
 
 }
 func NotifyWebSocket(c *gin.Context) {
-	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status": http.StatusInternalServerError,
@@ -372,7 +447,7 @@ func NotifyWebSocket(c *gin.Context) {
 }
 
 // func wshandler(w http.ResponseWriter, r *http.Request) {
-//     conn, err := wsupgrader.Upgrade(w, r, nil)
+//     conn, err := upgrader.Upgrade(w, r, nil)
 //     if err != nil {
 //         fmt.Println("Failed to set websocket upgrade: %+v", err)
 //         return

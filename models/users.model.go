@@ -19,7 +19,7 @@ type User struct {
 	Name          string              `json:"name" bson:"name"`
 	Email         string              `json:"email" bson:"email"`
 	Date_BirthDay *time.Time          `json:"date_birth" bson:"date_birth,omitempty"`
-	Avatar        *string             `json:"avatar" bson:"avatar,omitempty"`
+	Avatar        string              `json:"avatar" bson:"avatar,omitempty"`
 	Account       string              `json:"account" bson:"account"`
 	Followers     *[]Followers        `json:"followers" bson:"followers,omitempty"`
 	Follow        *[]Follow           `json:"follow" bson:"follow,omitempty"`
