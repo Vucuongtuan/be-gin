@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 	"errors"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
 	"time"
 
@@ -36,12 +37,11 @@ type Reply struct {
 
 func (conn *Conn) GetCommentByBlog(blogID primitive.ObjectID) ([]Comment, error) {
 	var comments []Comment
-	cur, err := conn.CollectionComments.Find(context.Background(), bson.M{"blog_id": blogID})
+	cur, err := conn.CollectionComments.Find(context.Background(), bson.M{"blog_id": blogID}, options.Find().SetSort(bson.M{"created_at": -1}))
 	if err != nil {
 		return nil, err
 	}
 	defer cur.Close(context.Background())
-
 	for cur.Next(context.Background()) {
 		var comment Comment
 		if err := cur.Decode(&comment); err != nil {
