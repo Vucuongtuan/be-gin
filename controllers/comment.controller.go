@@ -66,6 +66,7 @@ func CommentByBlog(c *gin.Context) {
 			"status": http.StatusBadRequest,
 			"msg":    "Can't get id blog by params",
 		})
+		return
 	}
 	model := models.NewConn()
 	idObj, _ := primitive.ObjectIDFromHex(id)

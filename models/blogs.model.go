@@ -307,7 +307,6 @@ func (conn *Conn) GetBlogDetailBySlug(slug string) (int, string, any, error) {
 		}
 		return http.StatusInternalServerError, "Can not find blog details", Blogs{}, err
 	}
-	fmt.Println("author :", blogs.Author)
 	var user User
 	err = conn.CollectionUser.FindOne(context.Background(), bson.M{"_id": blogs.Author}).Decode(&user)
 	if err != nil {

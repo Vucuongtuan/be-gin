@@ -25,6 +25,8 @@ var wsupgrader = websocket.Upgrader{
 }
 var notifyClients = make(map[string]*websocket.Conn)
 var notifyMutex = sync.Mutex{}
+var commentClient = make(map[string][]*websocket.Conn)
+var commentMutex = sync.Mutex{}
 
 type BlogCommentClients struct {
 	Clients map[string]*websocket.Conn
@@ -172,14 +174,12 @@ type ReqDataComment struct {
 }
 
 func GetCommmentByBlog(c *gin.Context) {
-	var dataReq ReqDataComment
-	if err := c.BindJSON(&dataReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status": http.StatusBadRequest,
-			"msg":    "Err,reqComment",
-			"err":    err,
-		})
+	idBlog := c.Param("blogID")
+	if idBlog == "" {
+		fmt.Println("Missing blogID")
+		return
 	}
+	fmt.Println("blog : ", idBlog)
 	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -191,29 +191,26 @@ func GetCommmentByBlog(c *gin.Context) {
 	}
 
 	defer conn.Close()
-	notifyMutex.Lock()
-	notifyClients[dataReq.IDBlog] = conn
-	notifyMutex.Unlock()
+	commentMutex.Lock()
+	if commentClient[idBlog] == nil {
+		commentClient[idBlog] = []*websocket.Conn{}
+	}
+	commentClient[idBlog] = append(commentClient[idBlog], conn)
+	commentMutex.Unlock()
 
 	for {
-		_, message, err := conn.ReadMessage()
+		_, _, err := conn.ReadMessage()
 		if err != nil {
 			log.Println("Read error:", err)
-			notifyMutex.Lock()
-			delete(notifyClients, dataReq.IDBlog)
-			notifyMutex.Unlock()
+			commentMutex.Lock()
+			commentClient[idBlog] = RemoveConnection(commentClient[idBlog], conn)
+			if len(commentClient[idBlog]) == 0 {
+				delete(notifyClients, idBlog)
+			}
+			commentMutex.Unlock()
 			break
 		}
-		fmt.Println("Message:", string(message))
-		data := &ReqDataComment{
-			IDBlog:  dataReq.IDBlog,
-			UserID:  dataReq.UserID,
-			Name:    dataReq.Name,
-			Message: dataReq.Message,
-			Avatar:  dataReq.Avatar,
-		}
-		notificationsJSON, _ := json.Marshal(data)
-		conn.WriteMessage(websocket.TextMessage, notificationsJSON)
+
 	}
 
 }
@@ -223,22 +220,36 @@ func SendCommentAllUser(idBlog string, userID string, name, avatar, message stri
 		"user_id":    userID,
 		"username":   name,
 		"content":    message,
-		"avater":     avatar,
+		"avatar":     avatar,
 		"created_at": time.Now(),
 	}
 
-	notifyMutex.Lock()
-	defer notifyMutex.Unlock()
+	commentMutex.Lock()
+	defer commentMutex.Unlock()
 
-	if conn, exists := notifyClients[idBlog]; exists {
-		err := conn.WriteJSON(comment)
-		if err != nil {
-			fmt.Println("Error sending notification:", err)
-			conn.Close()
-			delete(notifyClients, idBlog)
+	if clients, exists := commentClient[idBlog]; exists {
+		for _, conn := range clients {
+			err := conn.WriteJSON(comment)
+			if err != nil {
+				fmt.Println("Error sending notification:", err)
+				conn.Close()
+				commentClient[idBlog] = RemoveConnection(commentClient[idBlog], conn)
+				if len(commentClient[idBlog]) == 0 {
+					delete(commentClient, idBlog)
+				}
+			}
 		}
 	} else {
 		fmt.Println("No WebSocket connection found for blog:", idBlog)
 	}
 	return nil
+}
+func RemoveConnection(conns []*websocket.Conn, connToRemove *websocket.Conn) []*websocket.Conn {
+	var updatedConns []*websocket.Conn
+	for _, conn := range conns {
+		if conn != connToRemove {
+			updatedConns = append(updatedConns, conn)
+		}
+	}
+	return updatedConns
 }
