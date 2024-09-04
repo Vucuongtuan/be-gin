@@ -58,15 +58,10 @@ func (conn *Conn) GetCommentByBlog(blogID primitive.ObjectID) ([]Comment, error)
 }
 
 func (conn *Conn) CommentByBlog(blogID primitive.ObjectID, userID primitive.ObjectID, message string) (*Comment, error) {
-	var dataUser User
-	err := conn.CollectionUser.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&dataUser)
-	if err != nil {
-		return nil, err
-	}
 	var user User
-	err = conn.CollectionUser.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+	err := conn.CollectionUser.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("User not found")
 	}
 	username := user.Name
 	now := time.Now()
@@ -74,7 +69,7 @@ func (conn *Conn) CommentByBlog(blogID primitive.ObjectID, userID primitive.Obje
 	comment := &Comment{
 		BlogID:     blogID,
 		UserName:   username,
-		Avatar:     dataUser.Avatar,
+		Avatar:     user.Avatar,
 		Content:    message,
 		UserID:     userID,
 		Created_At: &now,
@@ -84,7 +79,7 @@ func (conn *Conn) CommentByBlog(blogID primitive.ObjectID, userID primitive.Obje
 		"blog_id":    blogID,
 		"user_id":    userID,
 		"username":   username,
-		"avatar":     dataUser.Avatar,
+		"avatar":     user.Avatar,
 		"content":    message,
 		"created_at": &now,
 		"updated_at": &now,
