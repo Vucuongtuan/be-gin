@@ -34,7 +34,7 @@ func UploadFile(c *gin.Context) {
 	}
 
 	folder, _ := utils.CheckFolder(file.Header.Get("Content-Type"))
-	fileName := fmt.Sprintf("%d_%s.m3u8", time.Now().UnixNano(), file.Filename)
+	fileName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), file.Filename)
 	objectName := path.Join(folder, fileName)
 
 	// buckett
