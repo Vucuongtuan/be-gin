@@ -37,7 +37,7 @@ func UploadFile(c *gin.Context) {
 	fileName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), file.Filename)
 	objectName := path.Join(folder, fileName)
 
-	// buckett
+	// buckettt
 	bucket := storageClient.Bucket(os.Getenv("URL_BUCKET_FIREBASE"))
 	obj := bucket.Object(objectName)
 	wc := obj.NewWriter(context.Background())
