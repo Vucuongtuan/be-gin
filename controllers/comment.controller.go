@@ -405,7 +405,8 @@ func SocketLikeAndDisLikeBlog(c *gin.Context) {
 			"msg":    "ok",
 		})
 		return
-	} else {
+	}
+	if data.Type == "dislike" {
 		err := model.DisLikeBlog(data.UserID, data.BlogID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"err": err.Error(), "msg": "Can't like blog", "status": http.StatusInternalServerError})
@@ -417,7 +418,10 @@ func SocketLikeAndDisLikeBlog(c *gin.Context) {
 		})
 		return
 	}
-
+	c.JSON(http.StatusBadRequest, gin.H{
+		"status": http.StatusBadRequest,
+		"msg":    "Err",
+	})
 }
 func NotifyWebSocket(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
