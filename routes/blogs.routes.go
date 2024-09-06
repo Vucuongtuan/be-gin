@@ -30,6 +30,7 @@ func routesBlogs(r *gin.RouterGroup) {
 		blogs.GET("/", controllers.GetAllBlogs)
 		blogs.GET("/author/:id", controllers.GetBlogByAuthor)
 		blogs.GET("/q", middleware.View, controllers.GetBlogDetailBySlug)
+		blogs.GET("/like/:id", controllers.GetBlogUserLike)
 		blogs.POST("/search", func(c *gin.Context) {
 			var req SuggestRequest
 			if err := c.BindJSON(&req); err != nil {

@@ -474,3 +474,23 @@ func (conn *Conn) GetRelatedHashtags(keyword string) ([]Hashtags, error) {
 
 	return relatedHashtags, nil
 }
+func (conn *Conn) GetBlogUserLike(id primitive.ObjectID) ([]Blogs, error) {
+	var blogs []Blogs
+	filter := bson.M{
+		"like.user_id": id,
+	}
+	cursor, err := conn.CollectionBlogs.Find(context.Background(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	for cursor.Next(context.Background()) {
+		var blog Blogs
+		if err := cursor.Decode(&blog); err != nil {
+			return nil, err
+		}
+		blogs = append(blogs, blog)
+	}
+	return blogs, nil
+}

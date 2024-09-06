@@ -3,6 +3,7 @@ package controllers
 import (
 	"be/middleware"
 	"be/models"
+	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"os"
 	"strconv"
@@ -285,5 +286,39 @@ func DeleteBlog(c *gin.Context) {
 	c.JSON(status, gin.H{
 		"status": status,
 		"msg":    msg,
+	})
+}
+func GetBlogUserLike(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusNoContent, gin.H{
+			"status": http.StatusNoContent,
+			"msg":    "User not found",
+		})
+		return
+	}
+	model := models.NewConn()
+	idObj, _ := primitive.ObjectIDFromHex(id)
+	data, err := model.GetBlogUserLike(idObj)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNoContent, gin.H{
+				"status": http.StatusNoContent,
+				"msg":    "Data not found",
+				"err":    err,
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": http.StatusInternalServerError,
+			"msg":    "Failed to get data user like",
+			"err":    err,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status": http.StatusOK,
+		"msg":    "OK",
+		"data":   data,
 	})
 }
