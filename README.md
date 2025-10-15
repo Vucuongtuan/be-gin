@@ -7,35 +7,58 @@ Backend for a blog application written in Go using the Gin framework.
 - User authentication
 - Blog post management
 - Comments
-- GraphQL API for blogs
 
 ## Running the application
 
-### Prerequisites
+### Run locally with Go
 
-- Go
-- Docker
-- Docker Compose
-
-### Instructions
-
-1.  Clone the repository.
-2.  Install dependencies: `go mod tidy`
-3.  Run the application: `go run main.go`
+1. Clone the repository.
+2. Install dependencies: `go mod tidy`
+3. Run the application: `go run main.go`
 
 The application will be available at `http://localhost:8080`.
+
+### Run with Docker Compose (recommended)
+
+1. Create a `.env` file at the project root (example):
+
+   ```
+   PORT=8080
+   NAME_DB=be
+   MONGO_INITDB_ROOT_USERNAME=root
+   MONGO_INITDB_ROOT_PASSWORD=example
+   DATABASE_URL="mongodb://root:example@mongo:27017/be?authSource=admin"
+   ```
+
+2. Start the services (from the project directory):
+
+   - Run in foreground (show logs):  
+     `docker compose up --build`
+   - Run in background (detached):  
+     `docker compose up -d --build`
+
+3. Stop and remove containers and the MongoDB volume (if needed):  
+   `docker compose down -v`
+
+4. Access the application: `http://localhost:8080`
+
+Notes:
+
+- docker-compose configures the `be-gin` service (built from the Dockerfile in the project root) and a `mongo` service.
+- If there is no Dockerfile yet, add a suitable Dockerfile to build the Go application.
+- You may add a `.env.example` file to the repo to show required environment variables.
 
 ## Dependencies
 
 This project uses the following main dependencies:
 
-- **[Gin](https://github.com/gin-gonic/gin):** A popular web framework for Go.
-- **[Mongo Driver](https://github.com/mongodb/mongo-go-driver):** The official Go driver for MongoDB.
-- **[GORM](https://gorm.io/):** A developer-friendly ORM library for Go.
-- **[GoDotEnv](https://github.com/joho/godotenv):** A library to load environment variables from a `.env` file.
-- **[JWT-Go](https://github.com/golang-jwt/jwt):** A Go implementation of JSON Web Tokens (JWT).
-- **[Gorilla WebSocket](https://github.com/gorilla/websocket):** A Go implementation of the WebSocket protocol.
-- **[Firebase Admin SDK](https://firebase.google.com/docs/admin/setup):** The Firebase Admin SDK for Go.
-- **[Validator](https://github.com/go-playground/validator):** A Go library for struct and field validation.
+- Gin: https://github.com/gin-gonic/gin
+- MongoDB Go Driver: https://github.com/mongodb/mongo-go-driver
+- GORM: https://gorm.io/
+- GoDotEnv: https://github.com/joho/godotenv
+- JWT-Go: https://github.com/golang-jwt/jwt
+- Gorilla WebSocket: https://github.com/gorilla/websocket
+- Firebase Admin SDK for Go: https://firebase.google.com/docs/admin/setup
+- Validator: https://github.com/go-playground/validator
 
-For a full list of dependencies, please refer to the `go.mod` file.
+For the full list of modules, see `go.mod`.
